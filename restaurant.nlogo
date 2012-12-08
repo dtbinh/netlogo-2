@@ -1,6 +1,7 @@
 breed [tables table]
 breed [guests guest]
 breed [waiters waiter]
+breed [kitchens kitchen]
 
 turtles-own [state]
 
@@ -9,9 +10,9 @@ tables-own [places free-places]
 ;speed je rychlost pohybu hosta
 ;selected-table je vybrany stul, ke kteremu jde
 ;state je stav hosta
-guests-own [speed focused-table]
+guests-own [focused-table ordered-meal serving-waiter]
 
-waiters-own [focused-guest]
+waiters-own [focused-guest served-guests]
 
 ;globals [religion-colors max-distance] ;barvy viry, maximalni mozna vzdalenost vektoru
 
@@ -20,6 +21,15 @@ to setup
   
   ca ;clear all
   reset-ticks
+  
+  create-guests guests-count [
+      set color white ;hladovi hosti jsou bili
+      set size 1
+      ;set shape "person"
+      setxy random-pxcor random-pycor ;nahodne umisteni hosta, meli by se generovat u dveri
+      set focused-table "" ;zatim nema zadny stul
+      set serving-waiter "" ;zatim zadny cisnik neobsluhuje
+    ]
   
   create-tables tables-count [
     set color brown
@@ -30,25 +40,12 @@ to setup
     setxy random-pxcor random-pycor ;nahodne umisteni stolu, jeste predelame, aby byly vic pohromade
   ]
   
-  create-guests guests-count [
-    set color white ;hladovi hosti jsou bili
-    set size 1
-    set speed random-normal 1 0.2 ;rychlost pohybu hosta
-    ;set shape "person"
-    setxy random-pxcor random-pycor ;nahodne umisteni hosta, meli by se generovat u dveri
-    set focused-table ""
-  ]
-  
-    create-waiters waiters-count [
+  create-waiters waiters-count [
     set color blue;
     set size 1
     setxy random-pxcor random-pycor ;nahodne umisteni hosta, meli by se generovat u dveri
     set focused-guest ""
-  ]
-  
-  
-  
-  ask guests[
+    set served-guests [] ;hoste, o ktere se cisnik stara, nepredavaji si je
   ]
   
   
@@ -57,19 +54,52 @@ end
 
 to go
   
+  come
+    
   ask tables[
     update-free-places ;aktualizuj info o volnych stolech
   ]
     
   ask guests[
-    find-table ;najdi stul
-    update-label
+    ;prijd do restaurace
+    catch-table ;zaber stul
+    order
+    ;order ;objednavej jidlo
+    ;eat ; jez
+    ;pay ; plat
+    ;leave ;odejdi
+    ;update-time ;aktualizuj pokazde cas
+    ;
+    
+    
   ]
   
   ask waiters[
-    ;find-guest
+    catch-order
+    catching-order
+    pushing-order
+    ;get-guest
+    ;update-label
+    ]
+  
+  ask turtles[
     update-label
     ]
+  
+  
+  tick
+  
+end
+
+;host
+;prijde
+to come
+  
+  ;if random-float 100 < 1 [ ; 1% pravdepodobnost, ze prijdev kazdem ticku, cili je to cca 1 user na 100 ticku, TODO poisson nebo neco podobneho
+    
+    
+    
+  ;]
   
 end
 
@@ -84,7 +114,7 @@ end
 to move
   rt random 50
   lt random 50
-  fd speed
+  fd 1
 end
 
 
@@ -98,8 +128,8 @@ end
 
 ;host
 ;najdi prazdy stul a jdi k nemu
-;nehledej, pokud uz u stolu sedis
-to find-table
+;posad se
+to catch-table
   
   if at-table? [ stop ] ;pokud jsou u stolu, nehledaji ho
   
@@ -107,7 +137,7 @@ to find-table
   ;pripadne ma stul vybrany, ale je obsazeny, musis najit novy
   ifelse focused-table = "" or (focused-table != "" and [free-places] of focused-table < 1)[
     
-    set state "finding-table"
+    set state "looking-for-a-table"
     
     let table one-of tables with [free-places > 0 ]
     
@@ -122,14 +152,13 @@ to find-table
     
   ] [
   ;mam stul a je porad volny, jdu k nemu
-  set state "moving-to-table"
+  set state "catching-table"
   facexy [xcor] of focused-table [ycor] of focused-table 
   fd 1;jdi ke stolu
   ]  
   
   if at-table? and [free-places] of focused-table > 0[ 
-    set state "awaiting-waiter"
-    set color green; zeleny stav, ceka na cisnika
+    set state "waiting-for-order"
   ] ;pokud je u stolu, aktualizuj stav
   
   
@@ -143,12 +172,75 @@ to find-table
 end
 
 
-to find-guest
-    let guest one-of guests with [ state = "awaiting-waiter" ]
+;cisnik
+;vezme objednavku
+to catch-order
+  
+  ;dela, jen kdyz ceka nebo nema co na praci
+  
+    ;TODO hlidat vytizenost, zakaznika si vezme jen nejmene vytizeny
+    let guest one-of guests with [ state = "waiting-for-order" and serving-waiter = ""] ;najdi zakaznika ktery chce objednavat
     
+    if guest != nobody [
+      
+      set state "catching-order"
+      
+      set focused-guest guest ;ted pracuju s timto klientem
+      
+      set served-guests lput guest served-guests ;pridej do mych hostu
+      
+      ask guest[set serving-waiter myself] ;host ma tohoto cisnika    
+         
+      ] 
+end
+
+
+;cisnik
+;jde k objednavce
+to catching-order
+  
+  if state != "catching-order" [ stop ] ;dela, jen pokud ma jit k objednavce
+
+  ifelse any? guests-here with [ self = [focused-guest] of myself ] [   ;pokud jsem u hosta, vezmi objednavku
+    set state "taking-order"
+  ][
+  facexy [xcor] of focused-guest [ycor] of focused-guest
+  fd 1;jdi k hostovi
+  ]
+  
+end
+
+
+;host
+;objednava si
+to order
+  
+  if state = "waiting-for-order" and serving-waiter-here? [
     
+    ;TODO tady se da dat nejake zdrzeni, pokud by si objednaval dlouho
+    
+    set state "waiting-for-meal" 
+    
+    ask serving-waiter[
+      set state "pushing-order" ;cisnik pujde objednavat
+      ]
+    ]
     
 end
+
+
+;cisnik, odnes objednavku do kuchyne
+to pushing-order
+  
+  if state != "pushing-order" [ stop ] ;dela, jen pokud ma jit k objednavce
+  
+  
+  
+  
+  
+end
+
+
 
 
 
@@ -157,6 +249,18 @@ end
 to-report at-table?
   report count tables-here > 0
 end
+
+
+;host
+;mam u sebe sveho cisnika?
+;venuje se cisnik jenom me? tzn. je na me zameren?
+to-report serving-waiter-here?
+  report any? waiters-here with [ self = [serving-waiter] of myself and myself = focused-guest]
+end
+
+
+
+
 @#$#@#$#@
 GRAPHICS-WINDOW
 693
@@ -260,7 +364,7 @@ guests-count
 guests-count
 0
 100
-7
+1
 1
 1
 NIL
@@ -302,6 +406,21 @@ count guests with [state = \"finding-table\"]
 17
 1
 11
+
+SLIDER
+476
+139
+648
+172
+coming-rate
+coming-rate
+0
+100
+20
+1
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
