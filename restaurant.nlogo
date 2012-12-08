@@ -10,11 +10,9 @@ tables-own [places free-places]
 ;speed je rychlost pohybu hosta
 ;selected-table je vybrany stul, ke kteremu jde
 ;state je stav hosta
-guests-own [focused-table ordered-meal serving-waiter]
+guests-own [choosed-table ordered-meal time]
 
-waiters-own [focused-guest served-guests]
-
-;globals [religion-colors max-distance] ;barvy viry, maximalni mozna vzdalenost vektoru
+waiters-own [served-tables]
 
 
 to setup
@@ -27,16 +25,16 @@ to setup
       set size 1
       ;set shape "person"
       setxy random-pxcor random-pycor ;nahodne umisteni hosta, meli by se generovat u dveri
-      set focused-table "" ;zatim nema zadny stul
-      set serving-waiter "" ;zatim zadny cisnik neobsluhuje
+      set choosed-table ""
+      set state "coming"
     ]
   
   create-tables tables-count [
     set color brown
-    set places 4
+    set places table-seats
     set size 2
     set free-places 4 ;todo pocitat metoda
-    set shape "square 2"
+    set shape "square"
     setxy random-pxcor random-pycor ;nahodne umisteni stolu, jeste predelame, aby byly vic pohromade
   ]
   
@@ -44,9 +42,26 @@ to setup
     set color blue;
     set size 1
     setxy random-pxcor random-pycor ;nahodne umisteni hosta, meli by se generovat u dveri
-    set focused-guest ""
-    set served-guests [] ;hoste, o ktere se cisnik stara, nepredavaji si je
+    set served-tables [] ;hoste, o ktere se cisnik stara, nepredavaji si je
   ]
+  
+  
+  create-kitchens 1 [
+    set color white;
+    set shape "square"
+    set size 2
+    setxy random-pxcor random-pycor ;nahodne umisteni hosta, meli by se generovat u dveri
+    
+  ]
+  
+  
+  ;rozdel stoly, cisnici se stridaji a kazdy si vezme jeden
+  
+  
+  
+  ask tables[
+    
+    ]
   
   
 end
@@ -54,33 +69,29 @@ end
 
 to go
   
-  come
-    
   ask tables[
     update-free-places ;aktualizuj info o volnych stolech
   ]
     
+    
   ask guests[
     ;prijd do restaurace
-    catch-table ;zaber stul
+    seat ;zaber stul
     order
     ;order ;objednavej jidlo
     ;eat ; jez
     ;pay ; plat
     ;leave ;odejdi
-    ;update-time ;aktualizuj pokazde cas
+    update-time ;aktualizuj cas, ktery ma na obed
     ;
-    
     
   ]
   
+  
   ask waiters[
-    catch-order
-    catching-order
-    pushing-order
-    ;get-guest
-    ;update-label
+    round-between-tables
     ]
+  
   
   ask turtles[
     update-label
@@ -91,17 +102,23 @@ to go
   
 end
 
-;host
-;prijde
-to come
-  
-  ;if random-float 100 < 1 [ ; 1% pravdepodobnost, ze prijdev kazdem ticku, cili je to cca 1 user na 100 ticku, TODO poisson nebo neco podobneho
-    
-    
-    
-  ;]
+
+to round-between-tables
   
 end
+
+
+to update-time
+  
+  set time time + 1
+  let ratio (time / max-ticks-for-lunch) * 100
+  
+  if ratio < 50 [ set color green ] 
+  if ratio >= 50 and ratio < 100 [ set color orange ]
+  if ratio >= 100 [set color red]
+  
+end
+
 
 
 to update-label
@@ -129,21 +146,21 @@ end
 ;host
 ;najdi prazdy stul a jdi k nemu
 ;posad se
-to catch-table
+to seat
   
-  if at-table? [ stop ] ;pokud jsou u stolu, nehledaji ho
+  if at-table? [ stop ] ;pokud jsem u stolu, neposazuju se
   
   ;nema zatim vyhlidnuty stul, najdi ho
   ;pripadne ma stul vybrany, ale je obsazeny, musis najit novy
-  ifelse focused-table = "" or (focused-table != "" and [free-places] of focused-table < 1)[
+  ifelse choosed-table = "" or (choosed-table != "" and [free-places] of choosed-table < 1)[
     
-    set state "looking-for-a-table"
+    set state "seating"
     
     let table one-of tables with [free-places > 0 ]
     
     ifelse table != nobody [ ;stul existuje
       facexy [xcor] of table [ycor] of table ;nasmeruj se ke stolu
-      set focused-table table ;uloz stul, ktery jsem vybral
+      set choosed-table table ;uloz stul, ktery jsem vybral
       fd 1 ;jdi ke stolu
     ] [
     ;neni volny stul, co mam delat?
@@ -151,20 +168,15 @@ to catch-table
     ]
     
   ] [
+  
   ;mam stul a je porad volny, jdu k nemu
-  set state "catching-table"
-  facexy [xcor] of focused-table [ycor] of focused-table 
+  facexy [xcor] of choosed-table [ycor] of choosed-table 
   fd 1;jdi ke stolu
   ]  
   
-  if at-table? and [free-places] of focused-table > 0[ 
-    set state "waiting-for-order"
-  ] ;pokud je u stolu, aktualizuj stav
-  
-  
-  ;stul si aktualizuje stav, tohle musim, protoze v 1 tahu se hybaji postupne vsichni hosti a stul si aktualizuje stav jen na zacatku tahu
-  if focused-table != ""[
-    ask focused-table[
+  ;stul si aktualizuje stav, co kdyby se prave usadil?
+  if choosed-table != ""[
+    ask choosed-table[
       update-free-places
     ]
   ]
@@ -172,92 +184,36 @@ to catch-table
 end
 
 
-;cisnik
-;vezme objednavku
-to catch-order
-  
-  ;dela, jen kdyz ceka nebo nema co na praci
-  
-    ;TODO hlidat vytizenost, zakaznika si vezme jen nejmene vytizeny
-    let guest one-of guests with [ state = "waiting-for-order" and serving-waiter = ""] ;najdi zakaznika ktery chce objednavat
-    
-    if guest != nobody [
-      
-      set state "catching-order"
-      
-      set focused-guest guest ;ted pracuju s timto klientem
-      
-      set served-guests lput guest served-guests ;pridej do mych hostu
-      
-      ask guest[set serving-waiter myself] ;host ma tohoto cisnika    
-         
-      ] 
-end
-
-
-;cisnik
-;jde k objednavce
-to catching-order
-  
-  if state != "catching-order" [ stop ] ;dela, jen pokud ma jit k objednavce
-
-  ifelse any? guests-here with [ self = [focused-guest] of myself ] [   ;pokud jsem u hosta, vezmi objednavku
-    set state "taking-order"
-  ][
-  facexy [xcor] of focused-guest [ycor] of focused-guest
-  fd 1;jdi k hostovi
-  ]
-  
-end
-
-
-;host
-;objednava si
+;objednavka
+;musi byt posazeny
+;musi u nej byt cisnik
 to order
   
-  if state = "waiting-for-order" and serving-waiter-here? [
-    
-    ;TODO tady se da dat nejake zdrzeni, pokud by si objednaval dlouho
-    
-    set state "waiting-for-meal" 
-    
-    ask serving-waiter[
-      set state "pushing-order" ;cisnik pujde objednavat
-      ]
-    ]
-    
-end
-
-
-;cisnik, odnes objednavku do kuchyne
-to pushing-order
+  if at-table? and state = "seating" [ set state "wanna-order" ]
   
-  if state != "pushing-order" [ stop ] ;dela, jen pokud ma jit k objednavce
+  if state != "wanna-order" or waiter-here?  [ stop ] ;pro objednavku musim chtit objednat a musi tady byt cisnik
   
-  
-  
-  
+  ;objednavam
   
 end
-
-
 
 
 
 ;host
+;muzu objednavat?
+;ano, pokud jsem u stolu a mam stav seating
 ;jsem u stolu?
 to-report at-table?
   report count tables-here > 0
 end
 
 
-;host
-;mam u sebe sveho cisnika?
-;venuje se cisnik jenom me? tzn. je na me zameren?
-to-report serving-waiter-here?
-  report any? waiters-here with [ self = [serving-waiter] of myself and myself = focused-guest]
-end
 
+;host
+;je u me nejaky cisnik?
+to-report waiter-here?
+  report any? waiters-here
+end
 
 
 
@@ -265,10 +221,10 @@ end
 GRAPHICS-WINDOW
 693
 32
-1470
-648
-29
-22
+1262
+492
+21
+16
 13.0
 1
 10
@@ -276,13 +232,13 @@ GRAPHICS-WINDOW
 1
 1
 0
+0
+0
 1
-1
-1
--29
-29
--22
-22
+-21
+21
+-16
+16
 0
 0
 1
@@ -298,7 +254,7 @@ tables-count
 tables-count
 0
 10
-1
+2
 1
 1
 NIL
@@ -364,17 +320,17 @@ guests-count
 guests-count
 0
 100
-1
+3
 1
 1
 NIL
 HORIZONTAL
 
 MONITOR
-63
-450
-155
-495
+73
+311
+165
+356
 awaiting waiter
 count guests with [state = \"awaiting-waiter\"]
 17
@@ -397,10 +353,10 @@ NIL
 HORIZONTAL
 
 MONITOR
-174
-450
-268
-495
+187
+312
+281
+357
 finding-table
 count guests with [state = \"finding-table\"]
 17
@@ -408,19 +364,54 @@ count guests with [state = \"finding-table\"]
 11
 
 SLIDER
-476
-139
-648
-172
-coming-rate
-coming-rate
+72
+135
+254
+168
+max-ticks-for-lunch
+max-ticks-for-lunch
 0
 100
-20
+28
 1
 1
 NIL
 HORIZONTAL
+
+SLIDER
+264
+136
+436
+169
+table-seats
+table-seats
+0
+6
+1
+1
+1
+NIL
+HORIZONTAL
+
+PLOT
+72
+400
+586
+577
+guest satisfaction
+NIL
+NIL
+0.0
+10.0
+0.0
+10.0
+true
+false
+"" ""
+PENS
+"default" 1.0 0 -10899396 true "" "plot count guests with [color = green]"
+"pen-1" 1.0 0 -955883 true "" "plot count guests with [color = orange]"
+"pen-2" 1.0 0 -2674135 true "" "plot count guests with [color = red]"
 
 @#$#@#$#@
 ## WHAT IS IT?
