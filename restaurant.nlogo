@@ -2,8 +2,16 @@ breed [tables table]
 breed [guests guest]
 breed [waiters waiter]
 
+turtles-own [state]
+
 tables-own [places free-places]
-guests-own [speed selected-table state]
+
+;speed je rychlost pohybu hosta
+;selected-table je vybrany stul, ke kteremu jde
+;state je stav hosta
+guests-own [speed focused-table]
+
+waiters-own [focused-guest]
 
 ;globals [religion-colors max-distance] ;barvy viry, maximalni mozna vzdalenost vektoru
 
@@ -15,7 +23,7 @@ to setup
   
   create-tables tables-count [
     set color brown
-    set places 1
+    set places 4
     set size 2
     set free-places 4 ;todo pocitat metoda
     set shape "square 2"
@@ -28,8 +36,17 @@ to setup
     set speed random-normal 1 0.2 ;rychlost pohybu hosta
     ;set shape "person"
     setxy random-pxcor random-pycor ;nahodne umisteni hosta, meli by se generovat u dveri
-    set selected-table ""
+    set focused-table ""
   ]
+  
+    create-waiters waiters-count [
+    set color blue;
+    set size 1
+    setxy random-pxcor random-pycor ;nahodne umisteni hosta, meli by se generovat u dveri
+    set focused-guest ""
+  ]
+  
+  
   
   ask guests[
   ]
@@ -40,20 +57,26 @@ end
 
 to go
   
+  ask tables[
+    update-free-places ;aktualizuj info o volnych stolech
+  ]
+    
   ask guests[
     find-table ;najdi stul
     update-label
   ]
   
-  ask tables[
-    update-free-places
+  ask waiters[
+    ;find-guest
+    update-label
     ]
-  
   
 end
 
+
 to update-label
   set label state
+  set label-color color
 end
 
 
@@ -82,41 +105,57 @@ to find-table
   
   ;nema zatim vyhlidnuty stul, najdi ho
   ;pripadne ma stul vybrany, ale je obsazeny, musis najit novy
-  ;if selected-table = nobody or (selected-table != nobody and [free-places] of selected-table = 0) [
-   
-  ifelse selected-table = "" or (selected-table != "" and [free-places] of selected-table = 0)[
+  ifelse focused-table = "" or (focused-table != "" and [free-places] of focused-table < 1)[
     
     set state "finding-table"
-
+    
     let table one-of tables with [free-places > 0 ]
     
     ifelse table != nobody [ ;stul existuje
       facexy [xcor] of table [ycor] of table ;nasmeruj se ke stolu
-      set selected-table table ;uloz stul, ktery jsem vybral
-      jump speed ;jdi ke stolu
+      set focused-table table ;uloz stul, ktery jsem vybral
+      fd 1 ;jdi ke stolu
     ] [
     ;neni volny stul, co mam delat?
-    ;zatim stuj
+    ;ted stuj
     ]
     
   ] [
   ;mam stul a je porad volny, jdu k nemu
   set state "moving-to-table"
-  jump speed ;jdi ke stolu
+  facexy [xcor] of focused-table [ycor] of focused-table 
+  fd 1;jdi ke stolu
   ]  
-   
   
-  if at-table? [ set state "at-table"]
+  if at-table? and [free-places] of focused-table > 0[ 
+    set state "awaiting-waiter"
+    set color green; zeleny stav, ceka na cisnika
+  ] ;pokud je u stolu, aktualizuj stav
   
+  
+  ;stul si aktualizuje stav, tohle musim, protoze v 1 tahu se hybaji postupne vsichni hosti a stul si aktualizuje stav jen na zacatku tahu
+  if focused-table != ""[
+    ask focused-table[
+      update-free-places
+    ]
+  ]
   
 end
 
 
-to-report at-table?
-print "pocet stolu"
-print count tables-here = 0
-report count tables-here > 0
+to find-guest
+    let guest one-of guests with [ state = "awaiting-waiter" ]
+    
+    
+    
+end
 
+
+
+;host
+;jsem u stolu?
+to-report at-table?
+  report count tables-here > 0
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -155,7 +194,7 @@ tables-count
 tables-count
 0
 10
-4
+1
 1
 1
 NIL
@@ -221,11 +260,48 @@ guests-count
 guests-count
 0
 100
-5
+7
 1
 1
 NIL
 HORIZONTAL
+
+MONITOR
+63
+450
+155
+495
+awaiting waiter
+count guests with [state = \"awaiting-waiter\"]
+17
+1
+11
+
+SLIDER
+451
+44
+623
+77
+waiters-count
+waiters-count
+0
+10
+2
+1
+1
+NIL
+HORIZONTAL
+
+MONITOR
+174
+450
+268
+495
+finding-table
+count guests with [state = \"finding-table\"]
+17
+1
+11
 
 @#$#@#$#@
 ## WHAT IS IT?
