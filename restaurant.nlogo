@@ -3,22 +3,34 @@ breed [guests guest]
 breed [waiters waiter]
 breed [kitchens kitchen]
 
-turtles-own [state]
-
 tables-own [places free-places orders]
 
 ;speed je rychlost pohybu hosta
 ;selected-table je vybrany stul, ke kteremu jde
-;state je stav hosta
-guests-own [choosed-table time]
+;state je stav hosta, v ktere casti flow navstevy se nachazi
+guests-own [state choosed-table time]
 
-waiters-own [served-tables]
+waiters-own [served-tables orders-to-kitchen orders-to-table]
 
+kitchens-own [orders-to-cook orders-cooked]
+
+globals [guest-states]
 
 to setup
   
   ca ;clear all
   reset-ticks
+  
+  ;guest states
+; 0 coming
+; 1 seating
+; 2 ordering
+; 3 waiting
+; 4 eating
+; 5 paying
+; 6 leaving
+
+set guest-states ["coming" "seating" "ordering" "waiting" "eating" "paying" "leaving"]
   
   create-guests guests-count [
       set color white ;hladovi hosti jsou bili
@@ -26,7 +38,7 @@ to setup
       ;set shape "person"
       setxy random-pxcor random-pycor ;nahodne umisteni hosta, meli by se generovat u dveri
       set choosed-table ""
-      set state "coming"
+      set state 0
     ]
   
   create-tables tables-count [
@@ -36,6 +48,7 @@ to setup
     set free-places 4 ;todo pocitat metoda
     set shape "square"
     setxy random-pxcor random-pycor ;nahodne umisteni stolu, jeste predelame, aby byly vic pohromade
+    set orders []
   ]
   
   create-waiters waiters-count [
@@ -43,6 +56,8 @@ to setup
     set size 1
     setxy random-pxcor random-pycor ;nahodne umisteni hosta, meli by se generovat u dveri
     set served-tables [] ;hoste, o ktere se cisnik stara, nepredavaji si je
+    set orders-to-kitchen [] ;objednavky, ktere nosi do kuchyne (objednana jidla)
+    set orders-to-table [] ;objednavky, ktere nosi z kuchyne na stul (donesena jidla)
   ]
   
   
@@ -51,6 +66,8 @@ to setup
     set shape "square"
     set size 2
     setxy random-pxcor random-pycor ;nahodne umisteni hosta, meli by se generovat u dveri
+    set orders-to-cook []; objednavky k uvareni
+    set orders-cooked []; objednavky uvarene, muzou se rozdavat
     
   ]
   
@@ -71,6 +88,11 @@ to setup
   ]
   
   
+  ;pridej na seznam mist, ktere prochazi taky kuchyn
+  ask waiters[
+    set served-tables lput one-of kitchens served-tables
+  ]  
+  
 end
 
 
@@ -83,13 +105,14 @@ to go
     
   ask guests[
     ;prijd do restaurace
-    ;seat ;zaber stul
-    ;order
+    seat ;zaber stul
+    order
     ;order ;objednavej jidlo
     ;eat ; jez
     ;pay ; plat
     ;leave ;odejdi
     update-time ;aktualizuj cas, ktery ma na obed
+    update-label
     ;
     
   ]
@@ -97,15 +120,17 @@ to go
   
   ask waiters[
     circle-between-kitchens-and-tables
+    push-orders
     ]
   
   
-  ask turtles[
-    update-label
+  ask kitchens[
+    cook
     ]
   
-  
+    
   tick
+  
   
 end
 
@@ -113,13 +138,13 @@ end
 ;cisnici pendluji mezi stolama a kuchyni
 to circle-between-kitchens-and-tables
   
-  if empty? served-tables [ stop ]
+  if empty? served-tables [ stop ] ;nema stoly, nepokracuje (nastane, pokud je cisniku vic nez stolu)
   
   ;bez k prvnimu stolu na seznamu
   
   let table first served-tables ;prvni stul na seznamu
   
-  ifelse at-table? and one-of tables-here = table[ 
+  ifelse (at-table? and one-of tables-here = table) or (at-kitchen? and one-of kitchens-here = table)[ ;jsem u stolu nebo v kuchyni, ke kteremu jsem smeroval, rotuj dalsi cil
     ;jakmile jsi u stolu, dej tento stul na konec seznamu a pokracuj k dalsimu prvnimu stolu
     ;rotuj seznam
     set served-tables but-first served-tables ;vynech prvni stul, posun seznam, takze druhy stul bude prvni
@@ -130,6 +155,25 @@ to circle-between-kitchens-and-tables
   fd 1 ;jdi o 1 policko
   ]
   
+end
+
+
+;cisnik
+;predani objednavek do kuchyne
+to push-orders
+  
+  if not at-kitchen? or empty? orders-to-kitchen [ stop ] ;pokud neni v kuchyni, nebo nema co objednat, nepokracujeme
+  
+  ask one-of kitchens-here [ ;dej do kuchyne
+    
+    foreach [orders-to-kitchen] of myself [ ;projdi vsechny cisnikovy objednavky
+      set orders-to-cook lput ?1 orders-to-cook ;a kazdou z nich postupne po 1 dej na konec fronty objednavek
+    ]
+    
+  ]
+  
+  set orders-to-kitchen [] ;predal vsechny objednavky, zadny nema
+    
 end
 
 
@@ -147,7 +191,7 @@ end
 
 
 to update-label
-  set label state
+  set label state ;item state guest-states
   set label-color color
 end
 
@@ -179,7 +223,7 @@ to seat
   ;pripadne ma stul vybrany, ale je obsazeny, musis najit novy
   ifelse choosed-table = "" or (choosed-table != "" and [free-places] of choosed-table < 1)[
     
-    set state "seating"
+    set state "seating" ;seating
     
     let table one-of tables with [free-places > 0 ]
     
@@ -214,24 +258,58 @@ end
 ;musi u nej byt cisnik
 to order
   
-  if at-table? and state = "seating" [ set state "wanna-order" ]
+  if at-table? and state = "seating" [ set state "ordering" ] ;ordering
   
-  if state != "wanna-order" or waiter-here?  [ stop ] ;pro objednavku musim chtit objednat a musi tady byt cisnik
+  if not (state = "ordering" and waiter-here?) [stop] ;jidlo objednavam, jen pokud chci prave objednavat a u stolu je cisnik
+  
+  ;cisnik je tady, objednavam
+ 
+  ;objednavky jsou na "na stul" ne na "hlavu", cisnici takhle pracuji
+  ;objednavka je ted objekt stolu, nebereme v potaz jidlo, pro flow to ted neni dulezite
+  ;aka "na tento stul objednavam gulas"
+  ask one-of tables-here[
+    set orders lput self orders
+    ]
+
+  set state "waiting" ;ceka na jidlo  
   
   ;objednavam
+  print "objednavam"
+  print self
   
 end
 
 
 
-;host
-;muzu objednavat?
-;ano, pokud jsem u stolu a mam stav seating
+to cook
+  
+  ;if empty? orders-to-cook [ stop ] ;kdyz nic nemam varit, tak nevarim
+
+  ;pripravi jidlo k vydani
+  ;TODO lze dat brzdu, treba poisson, apod.
+  ;predpokladam, ze je to restaurace v dobe obeda, takze se nevari, ale jen vydavaji obedy (menicka), ktere uz jsou uvarene
+  ;1 tick = 1 pripravene jidlo
+  
+  if ticks mod ticks-needed-for-meal-in-kitchen = 0 [
+    output-print "kuchyne, vydavam jidlo"
+    ]
+ 
+
+  
+end
+
+
+
 ;jsem u stolu?
 to-report at-table?
   report count tables-here > 0
 end
 
+
+;jsem v kuchyni?
+to-report at-kitchen?
+  report count kitchens-here > 0
+end
 
 
 ;host
@@ -279,7 +357,7 @@ tables-count
 tables-count
 1
 10
-6
+2
 1
 1
 NIL
@@ -345,7 +423,7 @@ guests-count
 guests-count
 0
 100
-0
+2
 1
 1
 NIL
@@ -437,6 +515,28 @@ PENS
 "default" 1.0 0 -10899396 true "" "plot count guests with [color = green]"
 "pen-1" 1.0 0 -955883 true "" "plot count guests with [color = orange]"
 "pen-2" 1.0 0 -2674135 true "" "plot count guests with [color = red]"
+
+SLIDER
+72
+185
+337
+218
+ticks-needed-for-meal-in-kitchen
+ticks-needed-for-meal-in-kitchen
+1
+10
+5
+1
+1
+NIL
+HORIZONTAL
+
+OUTPUT
+694
+511
+1261
+609
+12
 
 @#$#@#$#@
 ## WHAT IS IT?
