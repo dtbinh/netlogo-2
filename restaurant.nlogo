@@ -5,12 +5,12 @@ breed [kitchens kitchen]
 
 turtles-own [state]
 
-tables-own [places free-places]
+tables-own [places free-places orders]
 
 ;speed je rychlost pohybu hosta
 ;selected-table je vybrany stul, ke kteremu jde
 ;state je stav hosta
-guests-own [choosed-table ordered-meal time]
+guests-own [choosed-table time]
 
 waiters-own [served-tables]
 
@@ -55,13 +55,20 @@ to setup
   ]
   
   
-  ;rozdel stoly, cisnici se stridaji a kazdy si vezme jeden
-  
-  
-  
-  ask tables[
-    
+  ask waiters[
+    set served-tables [] ;zatim zadne stoly
     ]
+  
+  
+  ;cisnici si rozdeli stoly
+  ask tables [
+    
+    let waiter min-one-of waiters [ length served-tables ] ; vyber cisnika s nejmensim poctem stolu, ktere obsluhuje. Rozdeli to spravedlive, postupne by meli mit vsichni cisnici stejny pocet stolu.
+    
+    ask waiter [
+      set served-tables lput myself served-tables  ;uloz cisnikovi stul, ktery bude obsluhovat.
+      ]    
+  ]
   
   
 end
@@ -76,8 +83,8 @@ to go
     
   ask guests[
     ;prijd do restaurace
-    seat ;zaber stul
-    order
+    ;seat ;zaber stul
+    ;order
     ;order ;objednavej jidlo
     ;eat ; jez
     ;pay ; plat
@@ -89,7 +96,7 @@ to go
   
   
   ask waiters[
-    round-between-tables
+    circle-between-kitchens-and-tables
     ]
   
   
@@ -103,7 +110,25 @@ to go
 end
 
 
-to round-between-tables
+;cisnici pendluji mezi stolama a kuchyni
+to circle-between-kitchens-and-tables
+  
+  if empty? served-tables [ stop ]
+  
+  ;bez k prvnimu stolu na seznamu
+  
+  let table first served-tables ;prvni stul na seznamu
+  
+  ifelse at-table? and one-of tables-here = table[ 
+    ;jakmile jsi u stolu, dej tento stul na konec seznamu a pokracuj k dalsimu prvnimu stolu
+    ;rotuj seznam
+    set served-tables but-first served-tables ;vynech prvni stul, posun seznam, takze druhy stul bude prvni
+    set served-tables lput table served-tables ;a prvni stul dej na konec
+  ][
+  ;nejsi u stolu, jdi k nemu
+  facexy [xcor] of table [ycor] of table ;nasmeruj se
+  fd 1 ;jdi o 1 policko
+  ]
   
 end
 
@@ -139,7 +164,7 @@ end
 ;aktulizuj pocet volnych mist
 to update-free-places
    set free-places places - count guests-here 
-   set label free-places
+   ;set label free-places
 end
 
 
@@ -252,9 +277,9 @@ SLIDER
 76
 tables-count
 tables-count
-0
+1
 10
-2
+6
 1
 1
 NIL
@@ -320,7 +345,7 @@ guests-count
 guests-count
 0
 100
-3
+0
 1
 1
 NIL
@@ -344,9 +369,9 @@ SLIDER
 77
 waiters-count
 waiters-count
-0
+1
 10
-2
+1
 1
 1
 NIL
