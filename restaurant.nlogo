@@ -120,7 +120,8 @@ to go
   
   ask waiters[
     circle-between-kitchens-and-tables
-    push-orders
+    push-orders ;dej objednavky do kuchyne
+    pull-orders ;vyzvedni hotove objednavky z kuchyne
     ]
   
   
@@ -159,7 +160,7 @@ end
 
 
 ;cisnik
-;predani objednavek do kuchyne
+;predej objednavky do kuchyne
 to push-orders
   
   if not at-kitchen? or empty? orders-to-kitchen [ stop ] ;pokud neni v kuchyni, nebo nema co objednat, nepokracujeme
@@ -174,6 +175,42 @@ to push-orders
   
   set orders-to-kitchen [] ;predal vsechny objednavky, zadny nema
     
+end
+
+
+;cisnik
+;vyzvedni jen MOJE objednavky z kuchyne
+
+to pull-orders
+  
+  if not at-kitchen? [ stop ] ;pokud neni v kuchyni, nepokracujeme
+   
+  ask one-of kitchens-here [ ;vyzvedni z kuchyne
+    
+    foreach orders-cooked [
+      
+      if member? ?1 [served-tables] of myself [;je to objednavka pro stul, ktery obsluhuju?
+        ask myself[ ;cisnik
+          set orders-to-table lput ?1 orders-to-table ;seznam objednavek k rozneseni u cisnika (orders-to-table) je prazdny, lep rovnou na konec
+        ]             
+      ]
+    ]
+  ]
+  
+  
+   ask self [
+     ;cisnik
+     ;projdi vsechny jeho stoly a zrus objednavky k jeho stolum, prave si je vyzvedl
+     foreach served-tables [
+       ask one-of kitchens-here [
+         set orders-cooked remove ?1 orders-cooked
+       ]
+     ]
+   ]
+
+  
+  
+  
 end
 
 
@@ -283,19 +320,17 @@ end
 
 to cook
   
-  ;if empty? orders-to-cook [ stop ] ;kdyz nic nemam varit, tak nevarim
+  if empty? orders-to-cook [ stop ] ;kdyz nic nemam varit, tak nevarim
 
   ;pripravi jidlo k vydani
   ;TODO lze dat brzdu, treba poisson, apod.
   ;predpokladam, ze je to restaurace v dobe obeda, takze se nevari, ale jen vydavaji obedy (menicka), ktere uz jsou uvarene
   ;1 tick = 1 pripravene jidlo
-  
-  if ticks mod ticks-needed-for-meal-in-kitchen = 0 [
-    output-print "kuchyne, vydavam jidlo"
-    ]
- 
+  if ticks mod ticks-needed-for-meal-in-kitchen = 0 [ ;pokud jsem dosahl limitu na vydej
+    set orders-cooked lput first orders-to-cook orders-cooked ;vem prvni jidlo z fronty a dej ho na konec jidel k vydani
+    set orders-to-cook but-first orders-to-cook ;z fronty jidel k priprave zrus prvni polozku, uz se vari
+  ]
 
-  
 end
 
 
@@ -449,7 +484,7 @@ waiters-count
 waiters-count
 1
 10
-1
+2
 1
 1
 NIL
@@ -467,13 +502,13 @@ count guests with [state = \"finding-table\"]
 11
 
 SLIDER
-72
-135
-254
-168
+73
+96
+255
+129
 max-ticks-for-lunch
 max-ticks-for-lunch
-0
+1
 100
 28
 1
@@ -482,13 +517,13 @@ NIL
 HORIZONTAL
 
 SLIDER
-264
-136
-436
-169
+265
+97
+437
+130
 table-seats
 table-seats
-0
+1
 6
 1
 1
@@ -518,14 +553,14 @@ PENS
 
 SLIDER
 72
-185
+152
 337
-218
+185
 ticks-needed-for-meal-in-kitchen
 ticks-needed-for-meal-in-kitchen
 1
+100
 10
-5
 1
 1
 NIL
