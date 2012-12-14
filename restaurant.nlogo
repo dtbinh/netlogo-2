@@ -15,8 +15,6 @@ waiters-own [served-tables orders-to-kitchen orders-to-table]
 
 kitchens-own [orders-to-cook orders-cooked]
 
-globals [guest-states]
-
 to setup
   
   ca ;clear all
@@ -30,9 +28,7 @@ to setup
 ; 4 eating
 ; 5 paying
 ; 6 leaving
-
-set guest-states ["coming" "seating" "ordering" "waiting" "eating" "paying" "leaving"]
-  
+ 
   create-guests guests-count [
       set color white ;hladovi hosti jsou bili
       set size 1
@@ -51,6 +47,7 @@ set guest-states ["coming" "seating" "ordering" "waiting" "eating" "paying" "lea
     setxy random-pxcor random-pycor ;nahodne umisteni stolu, jeste predelame, aby byly vic pohromade
     set orders []
     set meals []
+    set label self
   ]
   
   create-waiters waiters-count [
@@ -70,6 +67,7 @@ set guest-states ["coming" "seating" "ordering" "waiting" "eating" "paying" "lea
     setxy random-pxcor random-pycor ;nahodne umisteni hosta, meli by se generovat u dveri
     set orders-to-cook []; objednavky k uvareni
     set orders-cooked []; objednavky uvarene, muzou se rozdavat
+    set label self
     
   ]
   
@@ -111,6 +109,7 @@ to go
     guest-order
     guest-grab-meal
     guest-eat
+    guest-leave
     ;order ;objednavej jidlo
     ;eat ; jez
     ;pay ; plat
@@ -124,10 +123,12 @@ to go
   
   ask waiters[
     waiter-circle-between-kitchens-and-tables
+    waiter-skip-empty-tables
     waiter-pick-up-orders ;vyzvedni objednavky od stolu
     waiter-push-orders ;dej objednavky do kuchyne
     waiter-pull-orders ;vyzvedni hotove objednavky z kuchyne
     waiter-put-orders ;dej jidlo na stul
+    waiter-collect-money
     ]
   
   
@@ -148,7 +149,7 @@ to waiter-circle-between-kitchens-and-tables
   if empty? served-tables [ stop ] ;nema stoly, nepokracuje (nastane, pokud je cisniku vic nez stolu)
   
   ;bez k prvnimu stolu na seznamu
-  
+ 
   let table first served-tables ;prvni stul na seznamu
   
   ifelse (at-table? and one-of tables-here = table) or (at-kitchen? and one-of kitchens-here = table)[ ;jsem u stolu nebo v kuchyni, ke kteremu jsem smeroval, rotuj dalsi cil
@@ -161,6 +162,30 @@ to waiter-circle-between-kitchens-and-tables
   facexy [xcor] of table [ycor] of table ;nasmeruj se
   fd 1 ;jdi o 1 policko
   ]
+  
+end
+
+;cisnik
+;preskoc prazdne stoly
+to waiter-skip-empty-tables
+  
+  let table first served-tables ;prvni stul na seznamu
+  
+  if [breed] of table = tables [ ;jen stoly, kuchyni nepreskakujeme
+    
+    let skip false ;zatim nepreskakujeme
+    
+    ask table[
+      set skip count guests-here = 0 ;preskakujeme, pokud u vysledneho stolu neni zadny host
+    ]
+    
+    if skip = true [
+      set served-tables but-first served-tables ;vynech prvni stul, posun seznam, takze druhy stul bude prvni
+      set served-tables lput table served-tables ;a prvni stul dej na konec
+    ]
+    
+  ]
+  
   
 end
 
@@ -268,6 +293,19 @@ to waiter-put-orders
     
   ]  
   
+end
+
+
+;cisnik
+;kasiruj
+to waiter-collect-money
+  
+  if not at-table? [ stop ] ;pokud neni u stolu nebo nema co polozit, koncime
+  
+  ask guests-here with [state = "wanna pay"] [
+    set state "leaving"
+  ]
+    
 end
 
 
@@ -412,6 +450,15 @@ to guest-eat
     set state "wanna pay"
     ]
   
+end
+
+
+;host
+;odejdi
+to guest-leave
+  
+  if not (state = "leaving") [ stop ] ;pokud nema odejit, neodchazej
+  move
   
 end
 
@@ -491,7 +538,7 @@ tables-count
 tables-count
 1
 10
-1
+5
 1
 1
 NIL
@@ -608,8 +655,8 @@ SLIDER
 max-ticks-for-lunch
 max-ticks-for-lunch
 1
-100
-100
+1000
+300
 1
 1
 NIL
@@ -624,7 +671,7 @@ table-seats
 table-seats
 1
 6
-2
+1
 1
 1
 NIL
