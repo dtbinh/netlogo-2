@@ -538,7 +538,7 @@ tables-count
 tables-count
 1
 10
-5
+10
 1
 1
 NIL
@@ -604,7 +604,7 @@ guests-count
 guests-count
 0
 100
-2
+100
 1
 1
 NIL
@@ -630,7 +630,7 @@ waiters-count
 waiters-count
 1
 10
-1
+10
 1
 1
 NIL
@@ -656,7 +656,7 @@ max-ticks-for-lunch
 max-ticks-for-lunch
 1
 1000
-300
+541
 1
 1
 NIL
@@ -671,7 +671,7 @@ table-seats
 table-seats
 1
 6
-1
+4
 1
 1
 NIL
@@ -733,6 +733,72 @@ max-ticks-needed-for-eating
 1
 NIL
 HORIZONTAL
+
+MONITOR
+297
+614
+364
+659
+ordering
+count guests with [state = \"ordering\"]
+17
+1
+11
+
+MONITOR
+379
+614
+450
+659
+wanna pay
+count guests with [state = \"wanna pay\"]
+17
+1
+11
+
+MONITOR
+462
+615
+519
+660
+leaving
+count guests with [state = \"leaving\"]
+17
+1
+11
+
+MONITOR
+160
+614
+218
+659
+seating
+count guests with [state = \"seating\"]
+17
+1
+11
+
+MONITOR
+233
+614
+283
+659
+waiting
+count guests with [state = \"waiting\"]
+17
+1
+11
+
+MONITOR
+616
+622
+896
+667
+NIL
+length [orders-to-cook] of one-of kitchens
+17
+1
+11
 
 @#$#@#$#@
 ## WHAT IS IT?
