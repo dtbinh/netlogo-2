@@ -3,12 +3,13 @@ breed [guests guest]
 breed [waiters waiter]
 breed [kitchens kitchen]
 
-tables-own [places free-places orders]
+tables-own [places free-places orders meals]
 
 ;speed je rychlost pohybu hosta
 ;selected-table je vybrany stul, ke kteremu jde
 ;state je stav hosta, v ktere casti flow navstevy se nachazi
-guests-own [state choosed-table time]
+;meal je jidlo, ktere host ji
+guests-own [state choosed-table time meal]
 
 waiters-own [served-tables orders-to-kitchen orders-to-table]
 
@@ -49,6 +50,7 @@ set guest-states ["coming" "seating" "ordering" "waiting" "eating" "paying" "lea
     set shape "square"
     setxy random-pxcor random-pycor ;nahodne umisteni stolu, jeste predelame, aby byly vic pohromade
     set orders []
+    set meals []
   ]
   
   create-waiters waiters-count [
@@ -107,6 +109,8 @@ to go
     ;prijd do restaurace
     guest-seat ;zaber stul
     guest-order
+    guest-grab-meal
+    guest-eat
     ;order ;objednavej jidlo
     ;eat ; jez
     ;pay ; plat
@@ -123,7 +127,7 @@ to go
     waiter-pick-up-orders ;vyzvedni objednavky od stolu
     waiter-push-orders ;dej objednavky do kuchyne
     waiter-pull-orders ;vyzvedni hotove objednavky z kuchyne
-    ;waiter-put-orders ;dej jidlo na stul
+    waiter-put-orders ;dej jidlo na stul
     ]
   
   
@@ -241,6 +245,31 @@ to waiter-pick-up-orders
 end
 
 
+;cisnik
+;poloz objednavky na stul
+to waiter-put-orders
+  
+  if not at-table? or empty? [orders-to-table] of self [ stop ] ;pokud neni u stolu nebo nema co polozit, koncime
+  
+  ask self [ ;cisnik
+    
+    foreach orders-to-table [ ;cisnikovy jidla v ruce
+      
+      ask one-of tables-here [ ;stul
+        if self = ?1[ ;patri jidlo na tento stul?
+          set meals lput ?1 meals ;poloz 1 jidlo na stul
+        ]
+      ]
+      
+    ]
+    
+    ;zrus vsechna jidla cisnika k tomuto stolu, uz je rozdal
+    set orders-to-table remove (one-of tables-here) orders-to-table ;objednavka je "stul", takze zrus "stoly" ke stolu
+    
+  ]  
+  
+end
+
 
 to update-time
   
@@ -345,6 +374,48 @@ to guest-order
 end
 
 
+;host
+;vezmi si jidlo
+to guest-grab-meal
+  
+  if not (state = "waiting") [ stop ] ;pokud neceka na jidlo, nepokracuj
+  
+  ask one-of tables-here [ ;stul
+    
+    if not empty? meals [ ;je nejake volne jidlo na stole?
+      
+      let m first meals ;prvni volne jidlo
+      ;TODO jidlo si muzes vzit, jenom pokud budes cekat nejdele, jinak se muze stat, ze zacnes jist jidlo, ktere objednal host pred tebou
+      
+      ;vezmi si ho
+      ask myself[ ;host
+        set meal m ;tohle jidlo mam ja
+        set state "eating"
+      ]
+      
+      set meals but-first meals ;stul, zmizi jedno volne jidlo, vzal si ho prave host
+      
+    ]
+    
+  ]
+  
+end
+
+;host
+;jez jidlo
+to guest-eat
+  
+  if not (state = "eating") [ stop ] ;pokud neji, nepokracuj
+  
+  if ticks mod max-ticks-needed-for-eating = 0 [
+    set meal ""
+    set state "wanna pay"
+    ]
+  
+  
+end
+
+
 ;kuchyn
 ;uvar jidlo
 to kitchen-cook
@@ -355,7 +426,7 @@ to kitchen-cook
   ;TODO lze dat brzdu, treba poisson, apod.
   ;predpokladam, ze je to restaurace v dobe obeda, takze se nevari, ale jen vydavaji obedy (menu), ktere uz jsou uvarene
   ;1 tick = 1 pripravene jidlo
-  if ticks mod ticks-needed-for-meal-in-kitchen = 0 [ ;pokud jsem dosahl limitu na vydej
+  if ticks mod max-ticks-needed-for-preparing-meal = 0 [ ;pokud jsem dosahl limitu na vydej
     set orders-cooked lput first orders-to-cook orders-cooked ;vem prvni jidlo z fronty a dej ho na konec jidel k vydani
     set orders-to-cook but-first orders-to-cook ;z fronty jidel k priprave zrus prvni polozku, uz je pripraveno k vydani
   ]
@@ -486,7 +557,7 @@ guests-count
 guests-count
 0
 100
-1
+2
 1
 1
 NIL
@@ -538,7 +609,7 @@ max-ticks-for-lunch
 max-ticks-for-lunch
 1
 100
-28
+100
 1
 1
 NIL
@@ -553,7 +624,7 @@ table-seats
 table-seats
 1
 6
-1
+2
 1
 1
 NIL
@@ -582,10 +653,10 @@ PENS
 SLIDER
 72
 152
-337
+368
 185
-ticks-needed-for-meal-in-kitchen
-ticks-needed-for-meal-in-kitchen
+max-ticks-needed-for-preparing-meal
+max-ticks-needed-for-preparing-meal
 1
 100
 10
@@ -600,6 +671,21 @@ OUTPUT
 1261
 609
 12
+
+SLIDER
+73
+201
+311
+234
+max-ticks-needed-for-eating
+max-ticks-needed-for-eating
+1
+100
+20
+1
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
