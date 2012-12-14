@@ -105,8 +105,8 @@ to go
     
   ask guests[
     ;prijd do restaurace
-    seat ;zaber stul
-    order
+    guest-seat ;zaber stul
+    guest-order
     ;order ;objednavej jidlo
     ;eat ; jez
     ;pay ; plat
@@ -119,14 +119,16 @@ to go
   
   
   ask waiters[
-    circle-between-kitchens-and-tables
-    push-orders ;dej objednavky do kuchyne
-    pull-orders ;vyzvedni hotove objednavky z kuchyne
+    waiter-circle-between-kitchens-and-tables
+    waiter-pick-up-orders ;vyzvedni objednavky od stolu
+    waiter-push-orders ;dej objednavky do kuchyne
+    waiter-pull-orders ;vyzvedni hotove objednavky z kuchyne
+    ;waiter-put-orders ;dej jidlo na stul
     ]
   
   
   ask kitchens[
-    cook
+    kitchen-cook
     ]
   
     
@@ -137,7 +139,7 @@ end
 
 
 ;cisnici pendluji mezi stolama a kuchyni
-to circle-between-kitchens-and-tables
+to waiter-circle-between-kitchens-and-tables
   
   if empty? served-tables [ stop ] ;nema stoly, nepokracuje (nastane, pokud je cisniku vic nez stolu)
   
@@ -161,7 +163,7 @@ end
 
 ;cisnik
 ;predej objednavky do kuchyne
-to push-orders
+to waiter-push-orders
   
   if not at-kitchen? or empty? orders-to-kitchen [ stop ] ;pokud neni v kuchyni, nebo nema co objednat, nepokracujeme
   
@@ -178,18 +180,19 @@ to push-orders
 end
 
 
+
 ;cisnik
 ;vyzvedni jen MOJE objednavky z kuchyne
 
-to pull-orders
+to waiter-pull-orders
   
   if not at-kitchen? [ stop ] ;pokud neni v kuchyni, nepokracujeme
    
   ask one-of kitchens-here [ ;vyzvedni z kuchyne
     
-    foreach orders-cooked [
+    foreach orders-cooked [ ;projdi vsechna jidla pripravena k vydani 
       
-      if member? ?1 [served-tables] of myself [;je to objednavka pro stul, ktery obsluhuju?
+      if member? ?1 [served-tables] of myself [;je to objednavka pro stul, ktery obsluhuju? myself=cisnik
         ask myself[ ;cisnik
           set orders-to-table lput ?1 orders-to-table ;seznam objednavek k rozneseni u cisnika (orders-to-table) je prazdny, lep rovnou na konec
         ]             
@@ -197,9 +200,8 @@ to pull-orders
     ]
   ]
   
-  
+   ;cisnik 
    ask self [
-     ;cisnik
      ;projdi vsechny jeho stoly a zrus objednavky k jeho stolum, prave si je vyzvedl
      foreach served-tables [
        ask one-of kitchens-here [
@@ -207,11 +209,37 @@ to pull-orders
        ]
      ]
    ]
-
   
+end
+
+
+
+;cisnik
+;vyzvedni objednavky od stolu
+to waiter-pick-up-orders
+  
+  if not at-table? [ stop ] ;pokud neni u stolu, nema co vyzvedavat
+  
+  ;nekontroluju, zda vyzvedava objednavku, ktera patri ke stolu, ktery obsluhuje. Proste kdyz ke stolu prisel, ocekavam, ze ho obsluhuje.
+  ;vyzvedne vsechny objednavky najednou
+   
+  ask one-of tables-here[ ;stul u ktereho je cisnik
+    
+    foreach orders [ ;postupne kazdou objednavku ze stolu
+      
+      ask myself [ ;cisnik
+        set orders-to-kitchen lput ?1 orders-to-kitchen ;presun do objednavek cisnika
+      ]
+      
+    ]
+    
+    set orders [] ;zrus objednavky na stul, uz je ma vsechny cisnik
+    
+  ]
   
   
 end
+
 
 
 to update-time
@@ -252,7 +280,7 @@ end
 ;host
 ;najdi prazdy stul a jdi k nemu
 ;posad se
-to seat
+to guest-seat
   
   if at-table? [ stop ] ;pokud jsem u stolu, neposazuju se
   
@@ -293,7 +321,7 @@ end
 ;objednavka
 ;musi byt posazeny
 ;musi u nej byt cisnik
-to order
+to guest-order
   
   if at-table? and state = "seating" [ set state "ordering" ] ;ordering
   
@@ -311,24 +339,25 @@ to order
   set state "waiting" ;ceka na jidlo  
   
   ;objednavam
-  print "objednavam"
-  print self
+  output-print self
+  output-print "objednavam"
   
 end
 
 
-
-to cook
+;kuchyn
+;uvar jidlo
+to kitchen-cook
   
   if empty? orders-to-cook [ stop ] ;kdyz nic nemam varit, tak nevarim
 
   ;pripravi jidlo k vydani
   ;TODO lze dat brzdu, treba poisson, apod.
-  ;predpokladam, ze je to restaurace v dobe obeda, takze se nevari, ale jen vydavaji obedy (menicka), ktere uz jsou uvarene
+  ;predpokladam, ze je to restaurace v dobe obeda, takze se nevari, ale jen vydavaji obedy (menu), ktere uz jsou uvarene
   ;1 tick = 1 pripravene jidlo
   if ticks mod ticks-needed-for-meal-in-kitchen = 0 [ ;pokud jsem dosahl limitu na vydej
     set orders-cooked lput first orders-to-cook orders-cooked ;vem prvni jidlo z fronty a dej ho na konec jidel k vydani
-    set orders-to-cook but-first orders-to-cook ;z fronty jidel k priprave zrus prvni polozku, uz se vari
+    set orders-to-cook but-first orders-to-cook ;z fronty jidel k priprave zrus prvni polozku, uz je pripraveno k vydani
   ]
 
 end
@@ -352,7 +381,6 @@ end
 to-report waiter-here?
   report any? waiters-here
 end
-
 
 
 @#$#@#$#@
@@ -392,7 +420,7 @@ tables-count
 tables-count
 1
 10
-2
+1
 1
 1
 NIL
@@ -458,7 +486,7 @@ guests-count
 guests-count
 0
 100
-2
+1
 1
 1
 NIL
@@ -484,7 +512,7 @@ waiters-count
 waiters-count
 1
 10
-2
+1
 1
 1
 NIL
@@ -544,12 +572,12 @@ NIL
 0.0
 10.0
 true
-false
+true
 "" ""
 PENS
-"default" 1.0 0 -10899396 true "" "plot count guests with [color = green]"
-"pen-1" 1.0 0 -955883 true "" "plot count guests with [color = orange]"
-"pen-2" 1.0 0 -2674135 true "" "plot count guests with [color = red]"
+"ok" 1.0 0 -10899396 true "" "plot count guests with [color = green]"
+"in rush" 1.0 0 -955883 true "" "plot count guests with [color = orange]"
+"unsatisfied" 1.0 0 -2674135 true "" "plot count guests with [color = red]"
 
 SLIDER
 72
