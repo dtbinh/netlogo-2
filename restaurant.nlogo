@@ -537,8 +537,8 @@ SLIDER
 tables-count
 tables-count
 1
-10
-10
+100
+100
 1
 1
 NIL
@@ -603,8 +603,8 @@ SLIDER
 guests-count
 guests-count
 0
-100
-100
+500
+500
 1
 1
 NIL
@@ -629,8 +629,8 @@ SLIDER
 waiters-count
 waiters-count
 1
-10
-10
+100
+36
 1
 1
 NIL
@@ -671,7 +671,7 @@ table-seats
 table-seats
 1
 6
-4
+6
 1
 1
 NIL
