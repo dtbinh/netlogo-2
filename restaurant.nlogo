@@ -2,6 +2,7 @@ breed [tables table]
 breed [guests guest]
 breed [waiters waiter]
 breed [kitchens kitchen]
+breed [entrances entrance]
 
 tables-own [places free-places orders meals]
 
@@ -69,6 +70,15 @@ to setup
     set orders-cooked []; objednavky uvarene, muzou se rozdavat
     set label self
     
+  ]
+  
+  
+  create-entrances 1 [
+    set color red;
+    set shape "square"
+    set size 2
+    setxy random-pxcor random-pycor ;nahodne umisteni hosta, meli by se generovat u dveri
+    set label self    
   ]
   
   
@@ -538,7 +548,7 @@ tables-count
 tables-count
 1
 100
-100
+6
 1
 1
 NIL
@@ -604,7 +614,7 @@ guests-count
 guests-count
 0
 500
-500
+25
 1
 1
 NIL
@@ -630,7 +640,7 @@ waiters-count
 waiters-count
 1
 100
-36
+10
 1
 1
 NIL
@@ -682,7 +692,7 @@ PLOT
 400
 586
 577
-guest satisfaction
+guest's satisfaction
 NIL
 NIL
 0.0
@@ -799,6 +809,21 @@ length [orders-to-cook] of one-of kitchens
 17
 1
 11
+
+SLIDER
+451
+98
+623
+131
+entrances-count
+entrances-count
+1
+10
+1
+1
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
