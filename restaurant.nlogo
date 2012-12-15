@@ -74,7 +74,7 @@ to setup
     set color white;
     set shape "square"
     set size 2
-    setxy random-pxcor random-pycor ;nahodne umisteni hosta, meli by se generovat u dveri
+    setxy 0 0 ;kuchyn je uprostred
     set orders-to-cook []; objednavky k uvareni
     set orders-cooked []; objednavky uvarene, muzou se rozdavat
     set label self
@@ -167,6 +167,8 @@ to waiter-circle-between-kitchens-and-tables
   
   if empty? served-tables [ stop ] ;nema stoly, nepokracuje (nastane, pokud je cisniku vic nez stolu)
   
+  if not waiter-got-work? [ stop ] ;nema praci, nechod
+  
   ;bez k prvnimu stolu na seznamu
  
   let table first served-tables ;prvni stul na seznamu
@@ -188,23 +190,26 @@ end
 ;preskoc prazdne stoly
 to waiter-skip-empty-tables
   
-  let table first served-tables ;prvni stul na seznamu
-  
-  if [breed] of table = tables [ ;jen stoly, kuchyni nepreskakujeme
-    
+  let table first served-tables ;prvni stul/kuchyn na seznamu
+     
     let skip false ;zatim nepreskakujeme
     
-    ask table[
-      set skip count guests-here = 0 ;preskakujeme, pokud u vysledneho stolu neni zadny host
+    if [breed] of table = tables [ ;stoly
+      ask table[
+        set skip count guests-here = 0 ;stoly preskakujeme, pokud u vysledneho stolu neni zadny host
+        ;TODO stul preskocime, pokud tam neni host, ktery chce objednat / zaplatit / nebo sice ceka, ale my nemame zadne jidlo v ruce k vydani
+      ]
     ]
+    
+    if [breed] of table = kitchens [ ;kuchyne
+        set skip (length [orders-to-kitchen] of self = 0) and (length [orders-cooked] of table = 0);kuchyni preskakujeme, pokud cisnik nema objednavky k predani a kuchyn nema nic pripraveno k vydani
+    ]
+    
     
     if skip = true [
       set served-tables but-first served-tables ;vynech prvni stul, posun seznam, takze druhy stul bude prvni
       set served-tables lput table served-tables ;a prvni stul dej na konec
     ]
-    
-  ]
-  
   
 end
 
@@ -378,7 +383,7 @@ to guest-seat
   ;pripadne ma stul vybrany, ale je obsazeny, musis najit novy
   ifelse choosed-table = "" or (choosed-table != "" and [free-places] of choosed-table < 1)[
        
-    let table one-of tables with [free-places > 0 ]
+    let table (min-one-of (tables with [free-places > 0 ]) [distance myself])  ; vyber nejblizsi stul s nejakym volnym mistem
     
     ifelse table != nobody [ ;stul existuje
       facexy [xcor] of table [ycor] of table ;nasmeruj se ke stolu
@@ -407,11 +412,11 @@ end
 
 
 ;objednavka
-;musi byt posazeny
+;musi byt posazeny u sveho stolu
 ;musi u nej byt cisnik
 to guest-order
   
-  if at-table? and state = "seating" [ set state "ordering" ] ;ordering
+  if at-table? and state = "seating" and one-of tables-here = choosed-table [ set state "ordering" ] ;ordering
   
   if not (state = "ordering" and waiter-here?) [stop] ;jidlo objednavam, jen pokud chci prave objednavat a u stolu je cisnik
   
@@ -487,13 +492,11 @@ to guest-leave
 
   ifelse at-entrance? [
     
-    set state "left"
-
     if color = green [set left-ok left-ok + 1]
     if color = orange [set left-in-rush left-in-rush + 1]
     if color = red [set left-unsatisfied left-unsatisfied + 1]
     
-    ;TODO hide nebo pridat pocet do globalni promenne
+    die
 
     ]
   [ 
@@ -541,13 +544,41 @@ to-report at-entrance?
 end
 
 
+;cisnik
+;ma praci? tzn je u nejakeho stolu host / ma neco pro kuchyni / ma neco odnes z kuchyne na stul? pokud ano, ma praci
+to-report waiter-got-work?
+  
+  let got-work false
+  
+  foreach served-tables[
+       
+    if got-work != true [ ;kontroluj, jen pokud se nenajde prvni "prace"
+      
+      if [breed] of ?1 = tables [ ;stoly
+        ask ?1 [
+          set got-work count guests-here > 0 ;nejaky stul ma hosty = ma praci
+          ;TODO kontrolovat hosty - ma praci, jen pokud nejaky host chce objednat, zaplatit
+        ]
+      ]
+      
+      if [breed] of ?1 = kitchens [ ;kuchyne
+        set got-work (length [orders-to-kitchen] of self > 0) or (length [orders-cooked] of ?1 > 0);ma neco pro kuchyni nebo v kuchyni je navareno k vydani = ma praci
+      ]
+      
+    ]
+     
+  ]
+    
+  report got-work
+  
+end
+
 
 ;host
 ;je u me nejaky cisnik?
 to-report waiter-here?
   report any? waiters-here
 end
-
 
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -586,7 +617,7 @@ tables-count
 tables-count
 1
 100
-6
+10
 1
 1
 NIL
@@ -652,7 +683,7 @@ guests-count
 guests-count
 0
 500
-10
+20
 1
 1
 NIL
@@ -678,7 +709,7 @@ waiters-count
 waiters-count
 1
 100
-3
+10
 1
 1
 NIL
@@ -857,7 +888,7 @@ entrances-count
 entrances-count
 1
 10
-5
+2
 1
 1
 NIL
