@@ -10,16 +10,23 @@ tables-own [places free-places orders meals]
 ;selected-table je vybrany stul, ke kteremu jde
 ;state je stav hosta, v ktere casti flow navstevy se nachazi
 ;meal je jidlo, ktere host ji
-guests-own [state choosed-table time meal]
+;choosed-exit je zvoleny vychod, kterym chce odejit
+guests-own [state choosed-table time meal choosed-exit]
 
 waiters-own [served-tables orders-to-kitchen orders-to-table]
 
 kitchens-own [orders-to-cook orders-cooked]
 
+globals [left-ok left-in-rush left-unsatisfied]
+
 to setup
   
   ca ;clear all
   reset-ticks
+  
+  set left-ok 0
+  set left-in-rush 0
+  set left-unsatisfied 0
   
   ;guest states
 ; 0 coming
@@ -27,8 +34,9 @@ to setup
 ; 2 ordering
 ; 3 waiting
 ; 4 eating
-; 5 paying
+; 5 wanna pay
 ; 6 leaving
+; 7 left
  
   create-guests guests-count [
       set color white ;hladovi hosti jsou bili
@@ -36,7 +44,8 @@ to setup
       ;set shape "person"
       setxy random-pxcor random-pycor ;nahodne umisteni hosta, meli by se generovat u dveri
       set choosed-table ""
-      set state 0
+      set state "coming"
+      set choosed-exit ""
     ]
   
   create-tables tables-count [
@@ -73,7 +82,7 @@ to setup
   ]
   
   
-  create-entrances 1 [
+  create-entrances entrances-count [
     set color red;
     set shape "square"
     set size 2
@@ -124,7 +133,7 @@ to go
     ;eat ; jez
     ;pay ; plat
     ;leave ;odejdi
-    update-time ;aktualizuj cas, ktery ma na obed
+    guest-update-time ;aktualizuj cas, ktery ma na obed
     update-label
     ;
     
@@ -319,14 +328,16 @@ to waiter-collect-money
 end
 
 
-to update-time
+;host
+;aktualizuj barvu "nastvanosti"
+to guest-update-time
   
   set time time + 1
   let ratio (time / max-ticks-for-lunch) * 100
   
-  if ratio < 50 [ set color green ] 
-  if ratio >= 50 and ratio < 100 [ set color orange ]
-  if ratio >= 100 [set color red]
+  if ratio < 50 [ set color green ] ;OK
+  if ratio >= 75 and ratio < 100 [ set color orange ] ;75 casu, zacinaji byt nervozni
+  if ratio >= 90 [set color red] ;nastvani, nestihaji
   
 end
 
@@ -359,14 +370,14 @@ end
 ;posad se
 to guest-seat
   
-  if at-table? [ stop ] ;pokud jsem u stolu, neposazuju se
+  if (not at-table?) and state = "coming" [set state "seating"]
+  
+  if not (state = "seating" ) [stop] ;pokud se nemam posadit, preskakuju
   
   ;nema zatim vyhlidnuty stul, najdi ho
   ;pripadne ma stul vybrany, ale je obsazeny, musis najit novy
   ifelse choosed-table = "" or (choosed-table != "" and [free-places] of choosed-table < 1)[
-    
-    set state "seating" ;seating
-    
+       
     let table one-of tables with [free-places > 0 ]
     
     ifelse table != nobody [ ;stul existuje
@@ -466,9 +477,30 @@ end
 ;host
 ;odejdi
 to guest-leave
-  
+   
   if not (state = "leaving") [ stop ] ;pokud nema odejit, neodchazej
-  move
+
+  ;pokud nema vybrany vychod, vyber jej
+  if choosed-exit = "" [
+    set choosed-exit min-one-of entrances [distance myself] ;zvol nejblizsi vychod
+    ]
+
+  ifelse at-entrance? [
+    
+    set state "left"
+
+    if color = green [set left-ok left-ok + 1]
+    if color = orange [set left-in-rush left-in-rush + 1]
+    if color = red [set left-unsatisfied left-unsatisfied + 1]
+    
+    ;TODO hide nebo pridat pocet do globalni promenne
+
+    ]
+  [ 
+    ;neni u vychodu, jdi k nemu
+    facexy [xcor] of choosed-exit [ycor] of choosed-exit
+    fd 1;jdi k vychodu
+  ]
   
 end
 
@@ -502,6 +534,12 @@ end
 to-report at-kitchen?
   report count kitchens-here > 0
 end
+
+;jsem u vchodu/vychodu?
+to-report at-entrance?
+  report count entrances-here > 0
+end
+
 
 
 ;host
@@ -614,7 +652,7 @@ guests-count
 guests-count
 0
 500
-25
+10
 1
 1
 NIL
@@ -640,7 +678,7 @@ waiters-count
 waiters-count
 1
 100
-10
+3
 1
 1
 NIL
@@ -666,7 +704,7 @@ max-ticks-for-lunch
 max-ticks-for-lunch
 1
 1000
-541
+300
 1
 1
 NIL
@@ -681,7 +719,7 @@ table-seats
 table-seats
 1
 6
-6
+4
 1
 1
 NIL
@@ -690,9 +728,9 @@ HORIZONTAL
 PLOT
 72
 400
-586
+517
 577
-guest's satisfaction
+guest's satisfaction when left
 NIL
 NIL
 0.0
@@ -703,9 +741,9 @@ true
 true
 "" ""
 PENS
-"ok" 1.0 0 -10899396 true "" "plot count guests with [color = green]"
-"in rush" 1.0 0 -955883 true "" "plot count guests with [color = orange]"
-"unsatisfied" 1.0 0 -2674135 true "" "plot count guests with [color = red]"
+"ok" 1.0 0 -10899396 true "" "plot left-ok"
+"in rush" 1.0 0 -955883 true "" "plot left-in-rush"
+"unsatisfied" 1.0 0 -2674135 true "" "plot left-unsatisfied"
 
 SLIDER
 72
@@ -745,10 +783,10 @@ NIL
 HORIZONTAL
 
 MONITOR
-297
-614
-364
-659
+231
+613
+298
+658
 ordering
 count guests with [state = \"ordering\"]
 17
@@ -756,9 +794,9 @@ count guests with [state = \"ordering\"]
 11
 
 MONITOR
-379
+449
 614
-450
+520
 659
 wanna pay
 count guests with [state = \"wanna pay\"]
@@ -767,10 +805,10 @@ count guests with [state = \"wanna pay\"]
 11
 
 MONITOR
-462
-615
-519
-660
+534
+613
+591
+658
 leaving
 count guests with [state = \"leaving\"]
 17
@@ -789,9 +827,9 @@ count guests with [state = \"seating\"]
 11
 
 MONITOR
-233
+311
 614
-283
+361
 659
 waiting
 count guests with [state = \"waiting\"]
@@ -800,11 +838,11 @@ count guests with [state = \"waiting\"]
 11
 
 MONITOR
-616
-622
-896
-667
-NIL
+696
+617
+837
+662
+kitchen orders-to-cook
 length [orders-to-cook] of one-of kitchens
 17
 1
@@ -819,11 +857,88 @@ entrances-count
 entrances-count
 1
 10
-1
+5
 1
 1
 NIL
 HORIZONTAL
+
+MONITOR
+848
+617
+1003
+662
+kitchen orders-cooked
+length [orders-cooked] of one-of kitchens
+17
+1
+11
+
+MONITOR
+72
+614
+129
+659
+coming
+count guests with [state = \"coming\"]
+17
+1
+11
+
+MONITOR
+605
+613
+662
+658
+left
+left-ok + left-in-rush + left-unsatisfied
+17
+1
+11
+
+MONITOR
+379
+614
+433
+659
+eating
+count guests with [state = \"eating\"]
+17
+1
+11
+
+MONITOR
+540
+402
+597
+447
+NIL
+left-ok
+17
+1
+11
+
+MONITOR
+540
+458
+627
+503
+NIL
+left-in-rush
+17
+1
+11
+
+MONITOR
+539
+518
+647
+563
+NIL
+left-unsatisfied
+17
+1
+11
 
 @#$#@#$#@
 ## WHAT IS IT?
