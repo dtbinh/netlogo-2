@@ -38,26 +38,19 @@ to setup
 ; 6 leaving
 ; 7 left
  
-  create-guests guests-count [
-      set color white ;hladovi hosti jsou bili
-      set size 1
-      ;set shape "person"
-      setxy random-pxcor random-pycor ;nahodne umisteni hosta, meli by se generovat u dveri
-      set choosed-table ""
-      set state "coming"
-      set choosed-exit ""
-    ]
   
   create-tables tables-count [
     set color brown
     set places table-seats
     set size 2
-    set free-places 4 ;todo pocitat metoda
+    set free-places 4 ;pri kroku se prepocitava
     set shape "square"
     setxy random-pxcor random-pycor ;nahodne umisteni stolu, jeste predelame, aby byly vic pohromade
     set orders []
     set meals []
-    set label self
+    if show-labels? [
+      set label self
+    ]
   ]
   
   create-waiters waiters-count [
@@ -72,13 +65,15 @@ to setup
   
   create-kitchens 1 [
     set color white;
+    set label-color grey;
     set shape "square"
     set size 2
     setxy 0 0 ;kuchyn je uprostred
     set orders-to-cook []; objednavky k uvareni
     set orders-cooked []; objednavky uvarene, muzou se rozdavat
-    set label self
-    
+    if show-labels? [
+      set label self
+    ] 
   ]
   
   
@@ -87,7 +82,9 @@ to setup
     set shape "square"
     set size 2
     setxy random-pxcor random-pycor ;nahodne umisteni hosta, meli by se generovat u dveri
-    set label self    
+    if show-labels? [
+      set label self
+    ]
   ]
   
   
@@ -120,6 +117,24 @@ to go
   ask tables[
     update-free-places ;aktualizuj info o volnych stolech
   ]
+  
+  
+  if (ticks mod guest-every-nth-tick) = 0 [
+    output-print ticks
+    create-guests 1 [
+      set color white ;hladovi hosti jsou bili
+      set size 1
+      ;set shape "person"
+      
+      let entrance one-of entrances ; vchod/vychod, ve kterem se objevi host
+      
+      setxy [xcor] of entrance [ycor] of entrance ;host se objevi v nejakem exitu
+      set choosed-table ""
+      set state "coming" ;host zrovna prichazi
+      set choosed-exit "" ;jeste nema vybrany vychod, rozhoduje se az pri odchazeni
+    ]
+  ]
+  
     
     
   ask guests[
@@ -134,7 +149,10 @@ to go
     ;pay ; plat
     ;leave ;odejdi
     guest-update-time ;aktualizuj cas, ktery ma na obed
-    update-label
+
+    if show-labels? [
+      guest-update-label
+    ]
     ;
     
   ]
@@ -148,6 +166,10 @@ to go
     waiter-pull-orders ;vyzvedni hotove objednavky z kuchyne
     waiter-put-orders ;dej jidlo na stul
     waiter-collect-money
+    
+    if show-labels? [
+      waiter-update-label
+    ]
     ]
   
   
@@ -165,10 +187,9 @@ end
 ;cisnici pendluji mezi stolama a kuchyni
 to waiter-circle-between-kitchens-and-tables
   
-  if empty? served-tables [ stop ] ;nema stoly, nepokracuje (nastane, pokud je cisniku vic nez stolu)
-  
-  if not waiter-got-work? [ stop ] ;nema praci, nechod
-  
+  if length served-tables = 0 [stop] ;nema stoly, nema praci, nechodi. Nastane, pokud je cisniku vic nez stolu.
+  if not waiter-got-work? [ stop ] ;nema hosty, nema praci, nechod
+    
   ;bez k prvnimu stolu na seznamu
  
   let table first served-tables ;prvni stul na seznamu
@@ -191,13 +212,21 @@ end
 to waiter-skip-empty-tables
   
   let table first served-tables ;prvni stul/kuchyn na seznamu
+  
+  let waiter self ;cisnik do promenne, zjednoduseni pro pouziti v iteraci
      
     let skip false ;zatim nepreskakujeme
     
     if [breed] of table = tables [ ;stoly
       ask table[
         set skip count guests-here = 0 ;stoly preskakujeme, pokud u vysledneho stolu neni zadny host
-        ;TODO stul preskocime, pokud tam neni host, ktery chce objednat / zaplatit / nebo sice ceka, ale my nemame zadne jidlo v ruce k vydani
+        
+        foreach sort guests-here [ ;projed hosty u stolu
+          if skip != true [ ;pokud uz mam preskocit, nepokracuj, staci 1 host, ktery neco chce
+            ;stul preskocime, pokud tam neni host, ktery chce objednat / zaplatit / nebo sice ceka, ale my nemame zadne jidlo v ruce k vydani
+            set skip not ([state] of ?1 = "ordering" or [state] of ?1 = "wanna pay" or ( [state] of ?1 = "waiting" and length [orders-to-table] of waiter > 0))
+          ]
+        ]
       ]
     ]
     
@@ -347,8 +376,18 @@ to guest-update-time
 end
 
 
+;cisnik
+;dej do popisky objednana jidla
+to waiter-update-label
+  ifelse length orders-to-kitchen > 0 [
+    set label orders-to-kitchen
+  ] [
+  set label ""
+  ]
+end
 
-to update-label
+
+to guest-update-label
   set label state ;item state guest-states
   set label-color color
 end
@@ -550,25 +589,49 @@ to-report waiter-got-work?
   
   let got-work false
   
-  foreach served-tables[
-       
+  set got-work waiter-got-guests? ;ma hosty = ma praci
+  
+  foreach served-tables[ ; projdi kuchyne
+    
     if got-work != true [ ;kontroluj, jen pokud se nenajde prvni "prace"
-      
-      if [breed] of ?1 = tables [ ;stoly
-        ask ?1 [
-          set got-work count guests-here > 0 ;nejaky stul ma hosty = ma praci
-          ;TODO kontrolovat hosty - ma praci, jen pokud nejaky host chce objednat, zaplatit
-        ]
-      ]
       
       if [breed] of ?1 = kitchens [ ;kuchyne
         set got-work (length [orders-to-kitchen] of self > 0) or (length [orders-cooked] of ?1 > 0);ma neco pro kuchyni nebo v kuchyni je navareno k vydani = ma praci
       ]
-      
     ]
-     
   ]
+  
+  report got-work
+  
+end
+
+
+;cisnik
+;ma hosty?
+;tzn ma stul, u ktereho nekdo sedi?
+to-report waiter-got-guests?
+  
+  let got-work false
+  
+  let waiter self
+  
+  foreach served-tables[
     
+    if got-work != true [ ;kontroluj, jen pokud se nenajde prvni "prace"
+      
+      if [breed] of ?1 = tables [ ;stoly
+        ask ?1 [
+          foreach sort guests-here[
+            if got-work != true [
+              ;ma hosta, pokud je to host, ktery chce objednat / zaplatit / chce jidlo a ja mam v ruce jidlo
+              set got-work ([state] of ?1 = "ordering" or [state] of ?1 = "wanna pay" or ( [state] of ?1 = "waiting" and length [orders-to-table] of waiter > 0))
+            ]
+          ]
+        ]
+      ]
+    ]
+  ]
+  
   report got-work
   
 end
@@ -674,21 +737,6 @@ NIL
 NIL
 1
 
-SLIDER
-264
-44
-436
-77
-guests-count
-guests-count
-0
-500
-20
-1
-1
-NIL
-HORIZONTAL
-
 MONITOR
 73
 311
@@ -709,7 +757,7 @@ waiters-count
 waiters-count
 1
 100
-10
+2
 1
 1
 NIL
@@ -775,6 +823,7 @@ PENS
 "ok" 1.0 0 -10899396 true "" "plot left-ok"
 "in rush" 1.0 0 -955883 true "" "plot left-in-rush"
 "unsatisfied" 1.0 0 -2674135 true "" "plot left-unsatisfied"
+"guests-here" 1.0 0 -13345367 true "" "plot count guests"
 
 SLIDER
 72
@@ -806,18 +855,18 @@ SLIDER
 max-ticks-needed-for-eating
 max-ticks-needed-for-eating
 1
-100
-20
+300
+21
 1
 1
 NIL
 HORIZONTAL
 
 MONITOR
-231
-613
-298
-658
+228
+676
+295
+721
 ordering
 count guests with [state = \"ordering\"]
 17
@@ -825,10 +874,10 @@ count guests with [state = \"ordering\"]
 11
 
 MONITOR
-449
-614
-520
-659
+446
+677
+517
+722
 wanna pay
 count guests with [state = \"wanna pay\"]
 17
@@ -836,10 +885,10 @@ count guests with [state = \"wanna pay\"]
 11
 
 MONITOR
-534
-613
-591
-658
+531
+676
+588
+721
 leaving
 count guests with [state = \"leaving\"]
 17
@@ -847,10 +896,10 @@ count guests with [state = \"leaving\"]
 11
 
 MONITOR
-160
-614
-218
-659
+157
+677
+215
+722
 seating
 count guests with [state = \"seating\"]
 17
@@ -858,10 +907,10 @@ count guests with [state = \"seating\"]
 11
 
 MONITOR
-311
-614
-361
-659
+308
+677
+358
+722
 waiting
 count guests with [state = \"waiting\"]
 17
@@ -906,10 +955,10 @@ length [orders-cooked] of one-of kitchens
 11
 
 MONITOR
-72
-614
-129
-659
+69
+677
+126
+722
 coming
 count guests with [state = \"coming\"]
 17
@@ -917,10 +966,10 @@ count guests with [state = \"coming\"]
 11
 
 MONITOR
-605
-613
-662
-658
+602
+676
+659
+721
 left
 left-ok + left-in-rush + left-unsatisfied
 17
@@ -928,10 +977,10 @@ left-ok + left-in-rush + left-unsatisfied
 11
 
 MONITOR
-379
-614
-433
-659
+376
+677
+430
+722
 eating
 count guests with [state = \"eating\"]
 17
@@ -967,6 +1016,71 @@ MONITOR
 563
 NIL
 left-unsatisfied
+17
+1
+11
+
+SWITCH
+384
+152
+522
+185
+show-labels?
+show-labels?
+0
+1
+-1000
+
+CHOOSER
+280
+36
+436
+81
+guest-every-nth-tick
+guest-every-nth-tick
+10 20 30 40 50 100 200 400 800 1600
+4
+
+MONITOR
+540
+346
+629
+391
+guests-here
+count guests
+17
+1
+11
+
+MONITOR
+478
+590
+571
+635
+% unsatisfied
+left-unsatisfied / (left-ok + left-in-rush + left-unsatisfied) * 100
+17
+1
+11
+
+MONITOR
+367
+590
+465
+635
+% left-in-rush
+left-in-rush / (left-ok + left-in-rush + left-unsatisfied) * 100
+17
+1
+11
+
+MONITOR
+288
+589
+354
+634
+% left-ok
+left-ok / (left-ok + left-in-rush + left-unsatisfied) * 100
 17
 1
 11
