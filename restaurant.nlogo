@@ -120,8 +120,7 @@ to go
   
   
   if (ticks mod guest-every-nth-tick) = 0 [
-    output-print ticks
-    create-guests 1 [
+    create-guests 1 [ ;TODO hosti chodi ve skupinkach
       set color white ;hladovi hosti jsou bili
       set size 1
       ;set shape "person"
@@ -466,8 +465,8 @@ to guest-order
   set state "waiting" ;ceka na jidlo  
   
   ;objednavam
-  output-print self
-  output-print "objednavam"
+  ;output-print self
+  ;output-print "objednavam"
   
 end
 
@@ -642,9 +641,9 @@ end
 GRAPHICS-WINDOW
 693
 32
-1262
+1574
 492
-21
+33
 16
 13.0
 1
@@ -656,8 +655,8 @@ GRAPHICS-WINDOW
 0
 0
 1
--21
-21
+-33
+33
 -16
 16
 0
@@ -675,7 +674,7 @@ tables-count
 tables-count
 1
 100
-5
+10
 1
 1
 NIL
@@ -752,7 +751,7 @@ waiters-count
 waiters-count
 1
 100
-2
+4
 1
 1
 NIL
@@ -778,7 +777,7 @@ max-ticks-for-lunch
 max-ticks-for-lunch
 1
 1000
-300
+500
 1
 1
 NIL
@@ -839,7 +838,7 @@ OUTPUT
 694
 511
 1261
-744
+561
 12
 
 SLIDER
@@ -851,7 +850,7 @@ max-ticks-needed-for-eating
 max-ticks-needed-for-eating
 1
 300
-21
+200
 1
 1
 NIL
@@ -913,10 +912,10 @@ count guests with [state = \"waiting\"]
 11
 
 MONITOR
-29
-620
-170
-665
+693
+576
+834
+621
 kitchen orders-to-cook
 length [orders-to-cook] of one-of kitchens
 17
@@ -932,17 +931,17 @@ entrances-count
 entrances-count
 1
 10
-1
+2
 1
 1
 NIL
 HORIZONTAL
 
 MONITOR
-181
-620
-336
-665
+845
+576
+1000
+621
 kitchen orders-cooked
 length [orders-cooked] of one-of kitchens
 17
