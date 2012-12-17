@@ -218,15 +218,8 @@ to waiter-skip-empty-tables
     let skip false ;zatim nepreskakujeme
     
     if [breed] of table = tables [ ;stoly
-      ask table[
+      ask table[        
         set skip count guests-here = 0 ;stoly preskakujeme, pokud u vysledneho stolu neni zadny host
-        
-        foreach sort guests-here [ ;projed hosty u stolu
-          if skip != true [ ;pokud uz mam preskocit, nepokracuj, staci 1 host, ktery neco chce
-            ;stul preskocime, pokud tam neni host, ktery chce objednat / zaplatit / nebo sice ceka, ale my nemame zadne jidlo v ruce k vydani
-            set skip not ([state] of ?1 = "ordering" or [state] of ?1 = "wanna pay" or ( [state] of ?1 = "waiting" and length [orders-to-table] of waiter > 0))
-          ]
-        ]
       ]
     ]
     
@@ -422,7 +415,9 @@ to guest-seat
   ;pripadne ma stul vybrany, ale je obsazeny, musis najit novy
   ifelse choosed-table = "" or (choosed-table != "" and [free-places] of choosed-table < 1)[
        
-    let table (min-one-of (tables with [free-places > 0 ]) [distance myself])  ; vyber nejblizsi stul s nejakym volnym mistem
+    let table (max-one-of (tables with [free-places > 0 ]) [free-places])  ; vyber nejblizsi stul s nejakym volnym mistem
+    
+    ;let table one-of (tables with [free-places > 0 ])  ; vyber nejaky stul s nejakym volnym mistem
     
     ifelse table != nobody [ ;stul existuje
       facexy [xcor] of table [ycor] of table ;nasmeruj se ke stolu
@@ -588,7 +583,7 @@ end
 to-report waiter-got-work?
   
   let got-work false
-  
+   
   set got-work waiter-got-guests? ;ma hosty = ma praci
   
   foreach served-tables[ ; projdi kuchyne
@@ -596,7 +591,7 @@ to-report waiter-got-work?
     if got-work != true [ ;kontroluj, jen pokud se nenajde prvni "prace"
       
       if [breed] of ?1 = kitchens [ ;kuchyne
-        set got-work (length [orders-to-kitchen] of self > 0) or (length [orders-cooked] of ?1 > 0);ma neco pro kuchyni nebo v kuchyni je navareno k vydani = ma praci
+        set got-work (length [orders-to-kitchen] of self > 0) or (length [orders-cooked] of ?1 > 0);ma neco pro kuchyni nebo v kuchyni je navareno k vydani = ma praci (ale jen kdyz ma hosty, jinak se bude jen motat dle objednavek ostatnich)
       ]
     ]
   ]
@@ -680,7 +675,7 @@ tables-count
 tables-count
 1
 100
-10
+5
 1
 1
 NIL
@@ -844,7 +839,7 @@ OUTPUT
 694
 511
 1261
-609
+744
 12
 
 SLIDER
@@ -918,10 +913,10 @@ count guests with [state = \"waiting\"]
 11
 
 MONITOR
-696
-617
-837
-662
+29
+620
+170
+665
 kitchen orders-to-cook
 length [orders-to-cook] of one-of kitchens
 17
@@ -937,17 +932,17 @@ entrances-count
 entrances-count
 1
 10
-2
+1
 1
 1
 NIL
 HORIZONTAL
 
 MONITOR
-848
-617
-1003
-662
+181
+620
+336
+665
 kitchen orders-cooked
 length [orders-cooked] of one-of kitchens
 17
