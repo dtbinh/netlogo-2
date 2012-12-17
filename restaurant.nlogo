@@ -1062,7 +1062,7 @@ CHOOSER
 guest-every-nth-tick
 guest-every-nth-tick
 1 2 3 4 5 7 10 20 30 40 50 100 200 400 800 1600
-10
+4
 
 MONITOR
 540
