@@ -114,6 +114,8 @@ end
 
 to go
   
+  if ticks >= max-ticks [stop]; stop, pokud jsme dosahli limitu behu simulace
+  
   ask tables[
     update-free-places ;aktualizuj info o volnych stolech
   ]
@@ -670,9 +672,9 @@ end
 GRAPHICS-WINDOW
 693
 32
-1574
+1262
 492
-33
+21
 16
 13.0
 1
@@ -684,8 +686,8 @@ GRAPHICS-WINDOW
 0
 0
 1
--33
-33
+-21
+21
 -16
 16
 0
@@ -703,7 +705,7 @@ tables-count
 tables-count
 1
 100
-30
+15
 1
 1
 NIL
@@ -780,7 +782,7 @@ waiters-count
 waiters-count
 1
 100
-30
+41
 1
 1
 NIL
@@ -857,7 +859,7 @@ max-ticks-needed-for-preparing-meal
 max-ticks-needed-for-preparing-meal
 1
 100
-1
+100
 1
 1
 NIL
@@ -879,7 +881,7 @@ max-ticks-needed-for-eating
 max-ticks-needed-for-eating
 1
 300
-200
+300
 1
 1
 NIL
@@ -960,7 +962,7 @@ entrances-count
 entrances-count
 1
 10
-5
+2
 1
 1
 NIL
@@ -1050,7 +1052,7 @@ SWITCH
 185
 show-labels?
 show-labels?
-1
+0
 1
 -1000
 
@@ -1062,7 +1064,7 @@ CHOOSER
 guest-every-nth-tick
 guest-every-nth-tick
 1 2 3 4 5 7 10 20 30 40 50 100 200 400 800 1600
-4
+10
 
 MONITOR
 540
@@ -1107,6 +1109,21 @@ left-ok / (left-ok + left-in-rush + left-unsatisfied) * 100
 17
 1
 11
+
+SLIDER
+323
+202
+495
+235
+max-ticks
+max-ticks
+100
+1000000
+1000000
+1
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
