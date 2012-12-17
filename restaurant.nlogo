@@ -782,7 +782,7 @@ waiters-count
 waiters-count
 1
 100
-41
+3
 1
 1
 NIL
@@ -808,7 +808,7 @@ max-ticks-for-lunch
 max-ticks-for-lunch
 1
 1000
-500
+600
 1
 1
 NIL
@@ -859,7 +859,7 @@ max-ticks-needed-for-preparing-meal
 max-ticks-needed-for-preparing-meal
 1
 100
-100
+1
 1
 1
 NIL
