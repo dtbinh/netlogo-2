@@ -187,7 +187,8 @@ end
 to waiter-circle-between-kitchens-and-tables
   
   if length served-tables = 0 [stop] ;nema stoly, nema praci, nechodi. Nastane, pokud je cisniku vic nez stolu.
-  if not waiter-got-work? [ stop ] ;nema hosty, nema praci, nechod
+  if not waiter-got-any-guests? [stop] ;nema hosty, nic nedela
+  if not waiter-got-work? [ stop ] ;nema zadnou praci, nic nedela
     
   ;bez k prvnimu stolu na seznamu
  
@@ -583,7 +584,7 @@ to-report waiter-got-work?
   
   let got-work false
    
-  set got-work waiter-got-guests? ;ma hosty = ma praci
+  set got-work waiter-got-guests-to-serve? ;ma hosty = ma praci
   
   foreach served-tables[ ; projdi kuchyne
     
@@ -601,9 +602,8 @@ end
 
 
 ;cisnik
-;ma hosty?
-;tzn ma stul, u ktereho nekdo sedi?
-to-report waiter-got-guests?
+;ma hosty, ktere muze obsluhovat?
+to-report waiter-got-guests-to-serve?
   
   let got-work false
   
@@ -620,6 +620,35 @@ to-report waiter-got-guests?
               ;ma hosta, pokud je to host, ktery chce objednat / zaplatit / chce jidlo a ja mam v ruce jidlo
               set got-work ([state] of ?1 = "ordering" or [state] of ?1 = "wanna pay" or ( [state] of ?1 = "waiting" and length [orders-to-table] of waiter > 0))
             ]
+          ]
+        ]
+      ]
+    ]
+  ]
+  
+  report got-work
+  
+end
+
+
+
+;cisnik
+;ma nejaky hosty?
+;tzn ma stul, u ktereho nekdo sedi?
+to-report waiter-got-any-guests?
+  
+  let got-work false
+  
+  let waiter self
+  
+  foreach served-tables[
+    
+    if got-work != true [ ;kontroluj, jen pokud se nenajde prvni "prace"
+      
+      if [breed] of ?1 = tables [ ;stoly
+        ask ?1 [
+          if got-work = false [
+            set got-work length sort guests-here > 0
           ]
         ]
       ]
@@ -674,7 +703,7 @@ tables-count
 tables-count
 1
 100
-10
+30
 1
 1
 NIL
@@ -751,7 +780,7 @@ waiters-count
 waiters-count
 1
 100
-4
+30
 1
 1
 NIL
@@ -828,7 +857,7 @@ max-ticks-needed-for-preparing-meal
 max-ticks-needed-for-preparing-meal
 1
 100
-10
+1
 1
 1
 NIL
@@ -931,7 +960,7 @@ entrances-count
 entrances-count
 1
 10
-2
+5
 1
 1
 NIL
@@ -1021,7 +1050,7 @@ SWITCH
 185
 show-labels?
 show-labels?
-0
+1
 1
 -1000
 
@@ -1032,8 +1061,8 @@ CHOOSER
 81
 guest-every-nth-tick
 guest-every-nth-tick
-10 20 30 40 50 100 200 400 800 1600
-4
+1 2 3 4 5 7 10 20 30 40 50 100 200 400 800 1600
+10
 
 MONITOR
 540
