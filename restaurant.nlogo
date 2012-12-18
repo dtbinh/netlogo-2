@@ -762,17 +762,6 @@ NIL
 NIL
 1
 
-MONITOR
-73
-311
-165
-356
-awaiting waiter
-count guests with [state = \"awaiting-waiter\"]
-17
-1
-11
-
 SLIDER
 451
 44
@@ -787,17 +776,6 @@ waiters-count
 1
 NIL
 HORIZONTAL
-
-MONITOR
-187
-312
-281
-357
-finding-table
-count guests with [state = \"finding-table\"]
-17
-1
-11
 
 SLIDER
 73
@@ -830,10 +808,10 @@ NIL
 HORIZONTAL
 
 PLOT
-72
-400
-517
-577
+66
+346
+520
+563
 guest's satisfaction when left
 NIL
 NIL
@@ -888,9 +866,9 @@ NIL
 HORIZONTAL
 
 MONITOR
-228
+217
 676
-295
+284
 721
 ordering
 count guests with [state = \"ordering\"]
@@ -899,9 +877,9 @@ count guests with [state = \"ordering\"]
 11
 
 MONITOR
-446
+435
 677
-517
+506
 722
 wanna pay
 count guests with [state = \"wanna pay\"]
@@ -910,9 +888,9 @@ count guests with [state = \"wanna pay\"]
 11
 
 MONITOR
-531
+520
 676
-588
+577
 721
 leaving
 count guests with [state = \"leaving\"]
@@ -921,9 +899,9 @@ count guests with [state = \"leaving\"]
 11
 
 MONITOR
-157
+146
 677
-215
+204
 722
 seating
 count guests with [state = \"seating\"]
@@ -932,9 +910,9 @@ count guests with [state = \"seating\"]
 11
 
 MONITOR
-308
+297
 677
-358
+347
 722
 waiting
 count guests with [state = \"waiting\"]
@@ -980,10 +958,10 @@ length [orders-cooked] of one-of kitchens
 11
 
 MONITOR
-69
-677
-126
-722
+76
+675
+133
+720
 coming
 count guests with [state = \"coming\"]
 17
@@ -991,9 +969,9 @@ count guests with [state = \"coming\"]
 11
 
 MONITOR
-602
+591
 676
-659
+648
 721
 left
 left-ok + left-in-rush + left-unsatisfied
@@ -1002,9 +980,9 @@ left-ok + left-in-rush + left-unsatisfied
 11
 
 MONITOR
-376
+365
 677
-430
+419
 722
 eating
 count guests with [state = \"eating\"]
@@ -1078,10 +1056,10 @@ count guests
 11
 
 MONITOR
-478
-590
-571
-635
+327
+602
+420
+647
 % unsatisfied
 left-unsatisfied / (left-ok + left-in-rush + left-unsatisfied) * 100
 17
@@ -1089,10 +1067,10 @@ left-unsatisfied / (left-ok + left-in-rush + left-unsatisfied) * 100
 11
 
 MONITOR
-367
-590
-465
-635
+216
+602
+314
+647
 % left-in-rush
 left-in-rush / (left-ok + left-in-rush + left-unsatisfied) * 100
 17
@@ -1100,10 +1078,10 @@ left-in-rush / (left-ok + left-in-rush + left-unsatisfied) * 100
 11
 
 MONITOR
-288
-589
-354
-634
+137
+601
+203
+646
 % left-ok
 left-ok / (left-ok + left-in-rush + left-unsatisfied) * 100
 17
@@ -1221,15 +1199,41 @@ Default values are OK to run. So just press Setup button and then Go. Then watch
 * max-ticks-for-lunch - guest's time for lunch. Default is 600. Recommended value is between 300-600.
 * table-seats - number of seats at each tables. Default is 4. Typical is 2-6.
 * entrances-count - number of entrances (exits). Default is 2. Typical is 1-2.
+* max-ticks-needed-for-preparing-meal - time for preparing one meal in the kitchen. Default 10. It uses modulo: When _ticks mod max-ticks-needed-for-preparing-meal = 0_, one meal (lunch) is prepared for pull out by waiter.
+* max-ticks-needed-for-eating - time for eating lunch. Default is 100. It uses modulo: When _ticks mod max-ticks-needed-for-eating = 0_, a guest is done with his lunch.
 * max-ticks - maximum ticks when the simulation will stop. Just for convenience, doesn't have any impact to the model.
+
+
+#### Switches
+
+* show-labels? - do we need to show labels of the objects? Default yes.
+
 
 #### Choosers
 
-* guest-every-nth-tick - every n-th tick a new guest will come. Default 50. Recommended value is between 20-100.
+* guest-every-nth-tick - every n-th tick a new guest will come. Default is 50. Recommended value is between 20-100.
 
 #### Monitors
+* guests-here - number of guests in restaurant now
+* left-ok - number of guests who left the restaurant with good feeling (time for lunch hasn't been exceeded)
+* left-in-rush - number of guests who left the restaurant in rush (time for lunch has been almost exceeded)
+* left-unsatisfied - number of guests who left the restaurant unsatisfied (time for lunch has been exceeded)
+* % left-ok - rate of guests who left the restaurant with good feeling (time for lunch hasn't been exceeded) related to total guests
+* % left-in-rush - rate of guests who left the restaurant in rush (time for lunch has been almost exceeded) related to total guests
+* % left-unsatisfied - rate of guests who left the restaurant unsatisfied (time for lunch has been exceeded) related to total guests
+* coming, seating, ordering, waiting, eating, wanna-pay, leaving, left - number of guests with these states
+* kitchen orders-to-cook - number of orders in kitchen waiting to be cooked
+* kitchen orders-cooked - number of orders in kitchen waiting to be pull-out by its waiter
 
+#### Plots
 
+* guest's satisfaction when left - graphical representation of guest's feeling
+
+#### Buttons
+
+* setup - set up a new simulation
+* go once - one step in the simulation
+* go - run the simulation
 
 (how to use the model, including a description of each of the items in the Interface tab)
 
@@ -1252,12 +1256,12 @@ Default values are OK to run. So just press Setup button and then Go. Then watch
 
 ## EXTENDING THE MODEL
 
-* the tables shouldn't be placed randomly because distance matters. For every restaurant tables placing is different so the simulation should be tuned for particular restaurant
+* the tables shouldn't be placed randomly because distance matters. In every restaurant, tables placing is different so the simulation should be set up for particular restaurant
 * more kitchens
 * pricing
 * rate of unsatisfied guest influences number of new guests
 * guests and waiters avoiding
-* guest will come on the basis of statistical function (poisson distribution, for example)
+* guest will come on the basis of a statistical function (poisson distribution, for example)
 
 (suggested things to add or change in the Code tab to make the model more complicated, detailed, accurate, etc.)
 
