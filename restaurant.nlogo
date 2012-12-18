@@ -1126,13 +1126,13 @@ Our task is to keep the rate of unsatisfied guests as low as possible. Also, we 
 
 #### Entrance / Exit
 
-* red square
+* a red square
 * a place where guests enter and leave the restaurant, aka "door"
 * number of entrances is configurable by **entrances-count** slider
 
 #### Table
 
-* table is shown as a brown square in the space
+* a brown square
 * number of tables is configurable through **tables-count** slider
 * it has just limited places (chairs) for sitting (adjustable by **table-seats** slider)
 * free capacity = table seats - occupied seats
@@ -1140,7 +1140,7 @@ Our task is to keep the rate of unsatisfied guests as low as possible. Also, we 
 
 #### Kitchen
 
-* white square
+* a white square
 * the model considers just one kitchen because it's common in reality
 * gets orders from waiters (amount is shown on **kitchen orders-to-cook** monitor)
 * "transforms" orders to lunches (amount is shown on **kitchen orders-cooked** monitor)
