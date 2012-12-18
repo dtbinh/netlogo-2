@@ -859,7 +859,7 @@ max-ticks-needed-for-preparing-meal
 max-ticks-needed-for-preparing-meal
 1
 100
-1
+3
 1
 1
 NIL
@@ -1052,7 +1052,7 @@ SWITCH
 185
 show-labels?
 show-labels?
-0
+1
 1
 -1000
 
@@ -1064,7 +1064,7 @@ CHOOSER
 guest-every-nth-tick
 guest-every-nth-tick
 1 2 3 4 5 7 10 20 30 40 50 100 200 400 800 1600
-10
+7
 
 MONITOR
 540
@@ -1130,15 +1130,82 @@ HORIZONTAL
 
 (a general understanding of what the model is trying to show or explain)
 
+This model simulates general traffic flow in a restaurant during lunch time. 
+
+During these hours, guests come, seat and wait for a waiter. When the waiter come they make an order from menu. Waiter goes to kitchen with the order and kitchen (cook) prepares ordered lunch. Then waiter pull-up the lunch (lunches) and bring it back to the guest's table.
+After lunch the guest wants to pay. He waits for the waiter, pays and leaves the restaurant.
+
+Each guest has limited time for his lunch only. When they exceed 90% of the maximum time they get angry and unsatisfied and propably won't come again.
+
+Our task is to keep the rate of unsatisfied guests as low as possible. Also, we would like to keep the number of waiters at minimum as well due to economical reasons.
+
+
 ## HOW IT WORKS
 
 (what rules the agents use to create the overall behavior of the model)
+
+### Static (non-moving) objects:
+
+Entrance / Exit
+
+* red square
+* a place where guests enter and leave the restaurant, aka "door"
+* number of entrances is configurable by **entrances-count** slider
+
+Table
+
+* table is shown as a brown square in the space
+* number of tables is configurable through **tables-count** slider
+* it has just limited places (chairs) for sitting (adjustable by **table-seats** slider)
+* free capacity = table seats - occupied seats
+* when free capacity reaches 0, nobody else can sit at the table
+
+Kitchen
+
+* white square
+* the model considers just one kitchen because it's common in reality
+* gets orders from waiters (amount is shown on **kitchen orders-to-cook** monitor)
+* "transforms" orders to lunches (amount is shown on **kitchen orders-cooked** monitor)
+* time for preparing lunch can be set using **max-ticks-needed-for-preparing-meal** slider, then **ticks mod max-ticks-needed-for-preparing-meal = 0** applies
+
+
+### Dynamic (moving) objects:
+
+Guest
+
+* they come to the restaurant and they are hungry so they just want to grab a lunch, eat it and get out as fast as possible
+* new guest comes every n-th click (round) and it's adjustable through **guest-every-nth-tick** slider
+* has limited time for his lunch only, it's adjustable through **max-ticks-for-lunch** slider
+* when time spent in the restaurant reaches 75% of limited time they are "in-rush"
+* when time spent in the restaurant reaches 90% of limited time they are "unsatisfied"
+* they prefer to seat alone
+* they prefer to use the nearest exit when they are done
+
+In time, guests have these states:
+
+* coming - first state when they came to the restaurant
+* seating - they're looking for any free table. A guest prefers to sit as alone as possible so he's choosing a table with maximum free capacity. Distance doesn't matter in this case (this is how reality works)
+* ordering - when they sit they call for a waiter
+* waiting - after the order has been placed they wait for the lunch
+* eating - when the lunch has been brough, they're in eating state. Time for eating can be set using **max-ticks-needed-for-eating** slider and then they are done with the lunch when _ticks mod max-ticks-needed-for-eating = 0_ occurs
+* wanna-pay - when guests are done with the lunch they want to pay and so wait for their waiter
+* leaving - final state, they are looking for nearest exit (entrance)
+
+
+
+
 
 ## HOW TO USE IT
 
 (how to use the model, including a description of each of the items in the Interface tab)
 
 ## THINGS TO NOTICE
+
+* due to random placing of the tables, the best thing is to have kitchen in the middle of the space
+* every move is expensive
+* distance matters. In the case the tables are near to each other the efficiency is much better
+* best thing is to have one waiter for each table. But it's not as the reality works
+* small space = better efficiency
 
 (suggested things for the user to notice while running the model)
 
@@ -1147,6 +1214,13 @@ HORIZONTAL
 (suggested things for the user to try to do (move sliders, switches, etc.) with the model)
 
 ## EXTENDING THE MODEL
+
+* the tables shouldn't be placed randomly because distance matters. For every restaurant tables placing is different so the simulation should be tuned for particular restaurant
+* more kitchens
+* pricing
+* rate of unsatisfied guest influences number of new guests
+* guests and waiters avoiding
+* guest will come on the basis of statistical function (poisson distribution, for example)
 
 (suggested things to add or change in the Code tab to make the model more complicated, detailed, accurate, etc.)
 
