@@ -705,7 +705,7 @@ tables-count
 tables-count
 1
 100
-15
+20
 1
 1
 NIL
@@ -782,7 +782,7 @@ waiters-count
 waiters-count
 1
 100
-3
+5
 1
 1
 NIL
@@ -808,7 +808,7 @@ max-ticks-for-lunch
 max-ticks-for-lunch
 1
 1000
-600
+689
 1
 1
 NIL
@@ -1064,7 +1064,7 @@ CHOOSER
 guest-every-nth-tick
 guest-every-nth-tick
 1 2 3 4 5 7 10 20 30 40 50 100 200 400 800 1600
-7
+0
 
 MONITOR
 540
@@ -1146,13 +1146,13 @@ Our task is to keep the rate of unsatisfied guests as low as possible. Also, we 
 
 ### Static (non-moving) objects:
 
-Entrance / Exit
+#### Entrance / Exit
 
 * red square
 * a place where guests enter and leave the restaurant, aka "door"
 * number of entrances is configurable by **entrances-count** slider
 
-Table
+#### Table
 
 * table is shown as a brown square in the space
 * number of tables is configurable through **tables-count** slider
@@ -1160,7 +1160,7 @@ Table
 * free capacity = table seats - occupied seats
 * when free capacity reaches 0, nobody else can sit at the table
 
-Kitchen
+#### Kitchen
 
 * white square
 * the model considers just one kitchen because it's common in reality
@@ -1171,8 +1171,10 @@ Kitchen
 
 ### Dynamic (moving) objects:
 
-Guest
+#### Guest
 
+* arrow shape 
+* green / orange / red color depends on the feeling (ok / in rush / unsatisfied)
 * they come to the restaurant and they are hungry so they just want to grab a lunch, eat it and get out as fast as possible
 * new guest comes every n-th click (round) and it's adjustable through **guest-every-nth-tick** slider
 * has limited time for his lunch only, it's adjustable through **max-ticks-for-lunch** slider
@@ -1180,6 +1182,8 @@ Guest
 * when time spent in the restaurant reaches 90% of limited time they are "unsatisfied"
 * they prefer to seat alone
 * they prefer to use the nearest exit when they are done
+
+#### Guest's states
 
 In time, guests have these states:
 
@@ -1191,11 +1195,41 @@ In time, guests have these states:
 * wanna-pay - when guests are done with the lunch they want to pay and so wait for their waiter
 * leaving - final state, they are looking for nearest exit (entrance)
 
+#### Waiter
 
-
+* blue arrow
+* has tables to serve
+* one waiter can have 0..N tables
+* one table has 1 waiter only
+* waiters don't help each other so every waiter is responsible for his tables only
+* the simulation tries to assign waiters to tables fairly. For example if the number of tables is 4 and we have 2 waiters each of them will have 2 tables.
+* waiter tries to move just in case it makes it sense. If he doesn't have any work (no guests, no orders for kitchen, no orders to pull) he stops.
+* waiter circles between tables and kitchen
+* if waiter's table is empty or nobody at the table wants to order/pay, the table is skipped
+* if waiter doesn't have anything to push (order) or pull (take) from kitchen, the kitchen is skipped
+* the order is placed for particular table, not for guest. This is how the reality works. For example "I have two orders for table 2 and three for table 3".
 
 
 ## HOW TO USE IT
+
+Default values are OK to run. So just press Setup button and then Go. Then watch amazing simulation.
+
+#### Sliders
+
+* waiters-count - number of waiters work at restaurant. Default is 2.
+* tables-count - number of tables at restaurant. Default is 10. Typical value is between 8-20.
+* max-ticks-for-lunch - guest's time for lunch. Default is 600. Recommended value is between 300-600.
+* table-seats - number of seats at each tables. Default is 4. Typical is 2-6.
+* entrances-count - number of entrances (exits). Default is 2. Typical is 1-2.
+* max-ticks - maximum ticks when the simulation will stop. Just for convenience, doesn't have any impact to the model.
+
+#### Choosers
+
+* guest-every-nth-tick - every n-th tick a new guest will come. Default 50. Recommended value is between 20-100.
+
+#### Monitors
+
+
 
 (how to use the model, including a description of each of the items in the Interface tab)
 
@@ -1206,10 +1240,13 @@ In time, guests have these states:
 * distance matters. In the case the tables are near to each other the efficiency is much better
 * best thing is to have one waiter for each table. But it's not as the reality works
 * small space = better efficiency
+* number of seats at a table is not as important because waiter has to come regardless of 1 or 10 guests
 
 (suggested things for the user to notice while running the model)
 
 ## THINGS TO TRY
+
+* set guest-every-nth-tick to 1, tables-count to 20, waiters-count to 5 and speed-up the simulation. A flock will arise :).
 
 (suggested things for the user to try to do (move sliders, switches, etc.) with the model)
 
@@ -1233,6 +1270,9 @@ In time, guests have these states:
 (models in the NetLogo Models Library and elsewhere which are of related interest)
 
 ## CREDITS AND REFERENCES
+
+Author: Bc. Jiri Hradil (jiri@hradil.cz)
+First release: 18.12.2012
 
 (a reference to the model's URL on the web if it has one, as well as any other necessary credits, citations, and links)
 @#$#@#$#@
