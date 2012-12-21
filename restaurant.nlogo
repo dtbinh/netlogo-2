@@ -38,20 +38,61 @@ to setup
 ; 6 leaving
 ; 7 left
  
-  
-  create-tables tables-count [
-    set color brown
-    set places table-seats
-    set size 2
-    set free-places 4 ;pri kroku se prepocitava
-    set shape "square"
-    setxy random-pxcor random-pycor ;nahodne umisteni stolu, jeste predelame, aby byly vic pohromade
-    set orders []
-    set meals []
-    if show-labels? [
-      set label self
+  if table-layout = "random with tables-count" [
+    create-tables tables-count [
+      set color brown
+      set places table-seats
+      set size 2
+      set free-places 4 ;pri kroku se prepocitava
+      set shape "square"
+      setxy random-pxcor random-pycor ;nahodne umisteni stolu, jeste predelame, aby byly vic pohromade
+      set orders []
+      set meals []
+      if show-labels? [
+        set label self
+      ]
     ]
   ]
+  
+  
+  if table-layout = "rectangle with 20 tables" [
+    
+    let x [-10 -7 -10 -7 -10 -7 -10 -7 -10 -7 10 7 10 7 10 7 10 7 10 7]
+    let y [6 6 3 3 0 0 -3 -3 -6 -6 6 6 3 3 0 0 -3 -3 -6 -6]  
+    
+    (foreach x y [
+      
+      create-tables 1 [
+        set color brown
+        set places table-seats
+        set size 2
+        set free-places 4 ;pri kroku se prepocitava
+        set shape "square"
+        setxy ?1 ?2
+        set orders []
+        set meals []
+        if show-labels? [
+          set label self
+        ]
+      ]
+    ])
+    
+    (foreach [0 0] [15 -15] [
+      create-entrances 1 [
+        set color red;
+        set shape "square"
+        set size 2
+        setxy ?1 ?2 
+        if show-labels? [
+          set label self
+        ]
+      ]])
+    
+  ]
+  
+  
+  
+  
   
   create-waiters waiters-count [
     set color blue;
@@ -75,18 +116,7 @@ to setup
       set label self
     ] 
   ]
-  
-  
-  create-entrances entrances-count [
-    set color red;
-    set shape "square"
-    set size 2
-    setxy random-pxcor random-pycor ;nahodne umisteni hosta, meli by se generovat u dveri
-    if show-labels? [
-      set label self
-    ]
-  ]
-  
+   
   
   ask waiters[
     set served-tables [] ;zatim zadne stoly
@@ -667,13 +697,12 @@ end
 to-report waiter-here?
   report any? waiters-here
 end
-
 @#$#@#$#@
 GRAPHICS-WINDOW
-693
-32
-1262
-492
+669
+29
+1238
+489
 21
 16
 13.0
@@ -763,15 +792,15 @@ NIL
 1
 
 SLIDER
-451
-44
-623
-77
+446
+97
+618
+130
 waiters-count
 waiters-count
 1
 100
-5
+2
 1
 1
 NIL
@@ -786,7 +815,7 @@ max-ticks-for-lunch
 max-ticks-for-lunch
 1
 1000
-689
+600
 1
 1
 NIL
@@ -859,7 +888,7 @@ max-ticks-needed-for-eating
 max-ticks-needed-for-eating
 1
 300
-300
+100
 1
 1
 NIL
@@ -932,10 +961,10 @@ length [orders-to-cook] of one-of kitchens
 11
 
 SLIDER
-451
-98
-623
-131
+377
+152
+549
+185
 entrances-count
 entrances-count
 1
@@ -1024,10 +1053,10 @@ left-unsatisfied
 11
 
 SWITCH
-384
-152
-522
-185
+503
+202
+641
+235
 show-labels?
 show-labels?
 1
@@ -1035,14 +1064,14 @@ show-labels?
 -1000
 
 CHOOSER
-280
-36
-436
-81
+473
+31
+629
+76
 guest-every-nth-tick
 guest-every-nth-tick
 1 2 3 4 5 7 10 20 30 40 50 100 200 400 800 1600
-0
+7
 
 MONITOR
 540
@@ -1102,6 +1131,16 @@ max-ticks
 1
 NIL
 HORIZONTAL
+
+CHOOSER
+255
+31
+464
+76
+table-layout
+table-layout
+"random with tables-count" "rectangle with 20 tables" "star with 20 tables" "l with 20 tables"
+1
 
 @#$#@#$#@
 ## WHAT IS IT?
