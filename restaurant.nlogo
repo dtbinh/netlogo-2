@@ -54,12 +54,13 @@ to setup
     ]
   ]
   
-  
-  if table-layout = "rectangle with 20 tables" [
+  ;ctverec s 20 stoly
+  if table-layout = "square 20" [
     
     let x [-10 -7 -10 -7 -10 -7 -10 -7 -10 -7 10 7 10 7 10 7 10 7 10 7]
     let y [6 6 3 3 0 0 -3 -3 -6 -6 6 6 3 3 0 0 -3 -3 -6 -6]  
     
+    ;20 stolu
     (foreach x y [
       
       create-tables 1 [
@@ -77,6 +78,45 @@ to setup
       ]
     ])
     
+    ;2 vchody/vychody
+    (foreach [0 0] [15 -15] [
+      create-entrances 1 [
+        set color red;
+        set shape "square"
+        set size 2
+        setxy ?1 ?2 
+        if show-labels? [
+          set label self
+        ]
+      ]])
+    
+  ]
+  
+  ;hvezda s 20 stoly
+  if table-layout = "star 20" [
+    
+    let x [0 0 12 -12 10 -10 -10 10 5 -5 -5 5 11 11 -11 -11 12]
+    let y [12 -12 0 0 10 -10 10 -10 11 -11 11 -11 7 -5 5 -5 4]  
+    
+    ;20 stolu
+    (foreach x y [
+      
+      create-tables 1 [
+        set color brown
+        set places table-seats
+        set size 2
+        set free-places 4 ;pri kroku se prepocitava
+        set shape "square"
+        setxy ?1 ?2
+        set orders []
+        set meals []
+        if show-labels? [
+          set label self
+        ]
+      ]
+    ])
+    
+    ;2 vchody/vychody
     (foreach [0 0] [15 -15] [
       create-entrances 1 [
         set color red;
@@ -1059,7 +1099,7 @@ SWITCH
 235
 show-labels?
 show-labels?
-1
+0
 1
 -1000
 
@@ -1139,8 +1179,8 @@ CHOOSER
 76
 table-layout
 table-layout
-"random with tables-count" "rectangle with 20 tables" "star with 20 tables" "l with 20 tables"
-1
+"random with tables-count" "square 20" "star 20" "l 20"
+2
 
 @#$#@#$#@
 ## WHAT IS IT?
