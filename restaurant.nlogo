@@ -40,25 +40,100 @@ kitchens-own [orders-to-cook orders-cooked]
 globals [left-ok left-in-rush left-unsatisfied total-visit-time]
 
 
-;automaticke nastaveni pro lokalni restauraci, zmeni ovladaci prvky, aby vyhovovaly ucelu simulace
-to setup-auto
+
+to setup
   
   ca ;clear all
   reset-ticks
   
-  set tables-count 15
+  if layout = "fixed with 20 tables and 1 entrance" [
+    setup-fixed
+  ]
+  
+  
+  if layout = "random using set tables and entrances" [
+    setup-random
+  ]
+  
+  ;spolecny setup pro vsechny layouty
+  
+  ;cisnici dle nastaveni
+  create-waiters waiters-count [
+    set color blue;
+    set size 1
+    setxy random-pxcor random-pycor ;nahodne umisteni hosta, meli by se generovat u dveri
+    set served-tables [] ;hoste, o ktere se cisnik stara, nepredavaji si je
+    set orders-to-kitchen [] ;objednavky, ktere nosi do kuchyne (objednana jidla)
+    set orders-to-table [] ;objednavky, ktere nosi z kuchyne na stul (donesena jidla)
+  ]
+  
+  
+  ;kuchyne vzdy 1, uprostred
+  create-kitchens 1 [
+    set color white;
+    set label-color grey;
+    set shape "square"
+    set size 2
+    setxy 0 0 ;kuchyn je uprostred
+    set orders-to-cook []; objednavky k uvareni
+    set orders-cooked []; objednavky uvarene, muzou se rozdavat
+    if show-labels? [
+      set label self
+    ] 
+  ]
+  
+  
+  ask waiters[
+    set served-tables [] ;zatim zadne stoly
+  ]
+  
+  
+  ;cisnici si rozdeli stoly
+  ask tables [
+    
+    let waiter min-one-of waiters [ length served-tables ] ; vyber cisnika s nejmensim poctem stolu, ktere obsluhuje. Rozdeli to spravedlive, postupne by meli mit vsichni cisnici stejny pocet stolu.
+    
+    ask waiter [
+      set served-tables lput myself served-tables  ;uloz cisnikovi stul, ktery bude obsluhovat.
+    ]    
+  ]
+  
+  
+  ;pridej na seznam mist, ktere prochazi taky kuchyn
+  ask waiters[
+    set served-tables lput one-of kitchens served-tables
+  ]
+  
+end
+
+
+;nastaveni vychozich hodnot pro simulaci
+to reset
+  
+  set layout "fixed with 20 tables and 1 entrance"
+  set tables-count 20
   set guest-every-nth-tick 60
   set max-ticks-for-lunch 2700 ;na jidlo max 45 minut, 15 minut potrebuji na prichod/odchod z/do prace
   set waiters-count 2
   set max-ticks-needed-for-preparing-meal 60 ;1 jidlo se max.pripravuje 1 minutu
   set entrances-count 1
   set max-ticks-needed-for-eating 1800 ; na jidlo potrebuje max 30 minut
+  setup
+  
+end
+
+
+;pevne nastaveni pro 20 stolu a 1 vychod
+to setup-fixed
+  
+  set tables-count 20
+  set entrances-count 1
   
   ;rozmisteni stolu dle skutecnosti
 
   ;ctverec s 15 stoly   
-    let x [-10 -7 -10 -7 -10 -7 -10 -7 -10 -7 10 7 10 7 10]
-    let y [6 6 3 3 0 0 -3 -3 -6 -6 6 6 3 3 0]  
+  let x [-10 -7 -10 -7 -10 -7 -10 -7 -10 -7 10 7 10 7 10 7 10 7 10 7]
+  let y [6 6 3 3 0 0 -3 -3 -6 -6 6 6 3 3 0 0 -3 -3 -6 -6]  
     
     (foreach x y [
       
@@ -88,14 +163,11 @@ to setup-auto
       ]
     ]
     
-    ;zbytek setupu v samostatne metode
-    setup-shared
-  
 end
 
 
-;manualni nastaveni, bere v uvahu slides, nemeni je
-to setup-manual
+;nahodne rozmisteni stolu a vychodu
+to setup-random
   
   ca ;clear all
   reset-ticks
@@ -126,64 +198,7 @@ to setup-manual
       set label self
     ]
   ]
-  
-  
-  ;zbytek setupu v samostatne metode
-  setup-shared  
     
-end
-
-
-;spolecny setup pro setup-auto a setup-manual, nevola se ovladacim prvkem
-to setup-shared
-   
-  create-waiters waiters-count [
-    set color blue;
-    set size 1
-    setxy random-pxcor random-pycor ;nahodne umisteni hosta, meli by se generovat u dveri
-    set served-tables [] ;hoste, o ktere se cisnik stara, nepredavaji si je
-    set orders-to-kitchen [] ;objednavky, ktere nosi do kuchyne (objednana jidla)
-    set orders-to-table [] ;objednavky, ktere nosi z kuchyne na stul (donesena jidla)
-  ]
-  
-  
-  ;kuchyne vzdy 1, uprostred
-  create-kitchens 1 [
-    set color white;
-    set label-color grey;
-    set shape "square"
-    set size 2
-    setxy 0 0 ;kuchyn je uprostred
-    set orders-to-cook []; objednavky k uvareni
-    set orders-cooked []; objednavky uvarene, muzou se rozdavat
-    if show-labels? [
-      set label self
-    ] 
-  ]
-  
-    
-  ask waiters[
-    set served-tables [] ;zatim zadne stoly
-    ]
-  
-  
-  ;cisnici si rozdeli stoly
-  ask tables [
-    
-    let waiter min-one-of waiters [ length served-tables ] ; vyber cisnika s nejmensim poctem stolu, ktere obsluhuje. Rozdeli to spravedlive, postupne by meli mit vsichni cisnici stejny pocet stolu.
-    
-    ask waiter [
-      set served-tables lput myself served-tables  ;uloz cisnikovi stul, ktery bude obsluhovat.
-      ]    
-  ]
-  
-  
-  ;pridej na seznam mist, ktere prochazi taky kuchyn
-  ask waiters[
-    set served-tables lput one-of kitchens served-tables
-  ]
-  
-  
 end
 
 
@@ -441,8 +456,8 @@ to guest-update-time
   let ratio (time / max-ticks-for-lunch) * 100
   
   if ratio < 75 [ set color green ] ;OK
-  if ratio >= 75 and ratio < 90 [ set color orange ] ;75 casu, zacinaji byt nervozni
-  if ratio >= 90 [set color red] ;nastvani, nestihaji
+  if ratio >= 75 and ratio <= 90 [ set color orange ]
+  if ratio > 90 [set color red] ;nastvani, nestihaji
   
 end
 
@@ -775,42 +790,25 @@ ticks
 30.0
 
 SLIDER
-73
-43
-245
-76
+376
+48
+548
+81
 tables-count
 tables-count
 1
 100
-15
+20
 1
 1
 NIL
 HORIZONTAL
 
 BUTTON
-186
-252
-304
-285
-NIL
-setup-manual
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
-
-BUTTON
-73
-298
-136
-331
+146
+320
+209
+353
 go
 go
 T
@@ -824,10 +822,10 @@ NIL
 1
 
 BUTTON
-147
-298
-228
-331
+220
+320
+301
+353
 go once
 go
 NIL
@@ -841,25 +839,25 @@ NIL
 1
 
 SLIDER
-446
-97
-618
-130
+255
+96
+427
+129
 waiters-count
 waiters-count
 1
 100
-2
+1
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-73
-96
-255
-129
+378
+149
+560
+182
 max-ticks-for-lunch
 max-ticks-for-lunch
 1
@@ -871,10 +869,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-265
-97
-437
-130
+436
+96
+608
+129
 table-seats
 table-seats
 1
@@ -886,10 +884,10 @@ NIL
 HORIZONTAL
 
 PLOT
-66
-346
-520
-563
+72
+362
+526
+579
 guest's satisfaction when left
 time (ticks)
 %
@@ -906,32 +904,25 @@ PENS
 "% unsatisfied" 1.0 0 -2674135 true "" "if left-ok + left-in-rush + left-unsatisfied > 0 [\nplot left-unsatisfied / (left-ok + left-in-rush + left-unsatisfied)  * 100\n]"
 
 SLIDER
-72
-152
-368
-185
+73
+148
+369
+181
 max-ticks-needed-for-preparing-meal
 max-ticks-needed-for-preparing-meal
 1
 900
-60
+30
 1
 1
 NIL
 HORIZONTAL
 
-OUTPUT
-694
-511
-1261
-561
-12
-
 SLIDER
-73
-201
-311
-234
+74
+197
+312
+230
 max-ticks-needed-for-eating
 max-ticks-needed-for-eating
 1
@@ -943,10 +934,10 @@ NIL
 HORIZONTAL
 
 MONITOR
-217
-676
-284
-721
+213
+661
+280
+706
 ordering
 count guests with [state = \"ordering\"]
 17
@@ -954,10 +945,10 @@ count guests with [state = \"ordering\"]
 11
 
 MONITOR
-435
-677
-506
-722
+431
+662
+502
+707
 wanna pay
 count guests with [state = \"wanna pay\"]
 17
@@ -965,10 +956,10 @@ count guests with [state = \"wanna pay\"]
 11
 
 MONITOR
-520
-676
-577
-721
+516
+661
+573
+706
 leaving
 count guests with [state = \"leaving\"]
 17
@@ -976,10 +967,10 @@ count guests with [state = \"leaving\"]
 11
 
 MONITOR
-146
-677
-204
-722
+142
+662
+200
+707
 seating
 count guests with [state = \"seating\"]
 17
@@ -987,10 +978,10 @@ count guests with [state = \"seating\"]
 11
 
 MONITOR
-297
-677
-347
-722
+293
+662
+343
+707
 waiting
 count guests with [state = \"waiting\"]
 17
@@ -998,10 +989,10 @@ count guests with [state = \"waiting\"]
 11
 
 MONITOR
-693
-576
-834
-621
+482
+600
+623
+645
 kitchen orders-to-cook
 length [orders-to-cook] of one-of kitchens
 17
@@ -1009,10 +1000,10 @@ length [orders-to-cook] of one-of kitchens
 11
 
 SLIDER
-377
-152
-549
-185
+73
+96
+245
+129
 entrances-count
 entrances-count
 1
@@ -1024,10 +1015,10 @@ NIL
 HORIZONTAL
 
 MONITOR
-845
-576
-1000
-621
+634
+600
+789
+645
 kitchen orders-cooked
 length [orders-cooked] of one-of kitchens
 17
@@ -1035,10 +1026,10 @@ length [orders-cooked] of one-of kitchens
 11
 
 MONITOR
-76
-675
-133
-720
+72
+660
+129
+705
 coming
 count guests with [state = \"coming\"]
 17
@@ -1046,10 +1037,10 @@ count guests with [state = \"coming\"]
 11
 
 MONITOR
-591
-676
-648
-721
+587
+661
+644
+706
 left
 left-ok + left-in-rush + left-unsatisfied
 17
@@ -1057,10 +1048,10 @@ left-ok + left-in-rush + left-unsatisfied
 11
 
 MONITOR
-365
-677
-419
-722
+361
+662
+415
+707
 eating
 count guests with [state = \"eating\"]
 17
@@ -1068,10 +1059,10 @@ count guests with [state = \"eating\"]
 11
 
 MONITOR
-540
-402
-597
-447
+541
+418
+598
+463
 NIL
 left-ok
 17
@@ -1079,10 +1070,10 @@ left-ok
 11
 
 MONITOR
-540
-458
-627
-503
+541
+474
+628
+519
 NIL
 left-in-rush
 17
@@ -1090,10 +1081,10 @@ left-in-rush
 11
 
 MONITOR
-539
-518
-647
-563
+540
+534
+648
+579
 NIL
 left-unsatisfied
 17
@@ -1101,10 +1092,10 @@ left-unsatisfied
 11
 
 SWITCH
-503
-202
-641
-235
+241
+273
+379
+306
 show-labels?
 show-labels?
 0
@@ -1112,10 +1103,10 @@ show-labels?
 -1000
 
 MONITOR
-540
-346
-629
-391
+541
+362
+630
+407
 guests-here
 count guests
 17
@@ -1123,10 +1114,10 @@ count guests
 11
 
 MONITOR
-327
-602
-420
-647
+262
+599
+355
+644
 % unsatisfied
 left-unsatisfied / (left-ok + left-in-rush + left-unsatisfied) * 100
 17
@@ -1134,10 +1125,10 @@ left-unsatisfied / (left-ok + left-in-rush + left-unsatisfied) * 100
 11
 
 MONITOR
-216
-602
-314
-647
+151
+599
+249
+644
 % left-in-rush
 left-in-rush / (left-ok + left-in-rush + left-unsatisfied) * 100
 17
@@ -1145,10 +1136,10 @@ left-in-rush / (left-ok + left-in-rush + left-unsatisfied) * 100
 11
 
 MONITOR
-137
-601
-203
-646
+72
+598
+138
+643
 % left-ok
 left-ok / (left-ok + left-in-rush + left-unsatisfied) * 100
 17
@@ -1156,10 +1147,10 @@ left-ok / (left-ok + left-in-rush + left-unsatisfied) * 100
 11
 
 SLIDER
-323
-202
-495
-235
+324
+198
+496
+231
 max-ticks
 max-ticks
 100
@@ -1172,11 +1163,11 @@ HORIZONTAL
 
 BUTTON
 73
-252
-174
-285
-setup-auto
-setup-auto
+319
+136
+352
+setup
+setup
 NIL
 1
 T
@@ -1188,10 +1179,10 @@ NIL
 1
 
 INPUTBOX
-266
-25
-421
-85
+73
+247
+228
+307
 guest-every-nth-tick
 60
 1
@@ -1199,15 +1190,42 @@ guest-every-nth-tick
 Number
 
 MONITOR
-438
-603
-532
-648
+373
+600
+467
+645
 avg visit time
 total-visit-time / (left-ok + left-in-rush + left-unsatisfied)
 17
 1
 11
+
+CHOOSER
+73
+38
+361
+83
+layout
+layout
+"fixed with 20 tables and 1 entrance" "random using set tables and entrances"
+0
+
+BUTTON
+311
+320
+478
+353
+reset to default values
+reset
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
 
 @#$#@#$#@
 ## WHAT IS IT?
