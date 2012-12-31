@@ -6,29 +6,8 @@ breed [entrances entrance]
 
 tables-own [places free-places orders meals]
 
-;speed je rychlost pohybu hosta
-;selected-table je vybrany stul, ke kteremu jde
+;host:
 ;state je stav hosta, v ktere casti flow navstevy se nachazi
-;meal je jidlo, ktere host ji
-;choosed-exit je zvoleny vychod, kterym chce odejit
-guests-own [state choosed-table time meal choosed-exit]
-
-waiters-own [served-tables orders-to-kitchen orders-to-table]
-
-kitchens-own [orders-to-cook orders-cooked]
-
-globals [left-ok left-in-rush left-unsatisfied]
-
-to setup
-  
-  ca ;clear all
-  reset-ticks
-  
-  set left-ok 0
-  set left-in-rush 0
-  set left-unsatisfied 0
-  
-  ;guest states
 ; 0 coming
 ; 1 seating
 ; 2 ordering
@@ -37,103 +16,124 @@ to setup
 ; 5 wanna pay
 ; 6 leaving
 ; 7 left
- 
-  if table-layout = "random with tables-count" [
-    create-tables tables-count [
-      set color brown
-      set places table-seats
-      set size 2
-      set free-places 4 ;pri kroku se prepocitava
+;choosed-table je vybrany stul, ke kteremu si jde sednout
+;time je cas hosta - pocet ticku, ktere mu narustaji od prichodu
+;meal je jidlo, ktere host ji
+;choosed-exit je zvoleny vychod, kterym chce odejit
+guests-own [state choosed-table time meal choosed-exit]
+
+;cisnik
+;server-tables je seznam stolu, ktere obsluhuje
+;orders-to-kitchen je seznam objednavek, ktere nese od stolu do kuchyne
+;orders-to-table jsou objednavky, ktere nese z kuchyne na stoly
+waiters-own [served-tables orders-to-kitchen orders-to-table]
+
+;kuchyn
+;orders-to-cook jsou prijate objednavky na jidlo (prave se vari=pripravuji)
+;orders-cooked jsou hotova jidla k vyzvednuti
+kitchens-own [orders-to-cook orders-cooked]
+
+;left-ok je pocet hostu, kteri opustili restauraci vcas, vycerpano <0; 75) % casu na obed
+;left-ok je pocet hostu, kteri opustili restauraci ve spechu, vycerpano <75; 90) % casu na obed
+;left-unsatisfied je pocet hostu, kteri opustili restauraci nespokojeni, vycerpano <90; 100> % casu na obed
+;total-spent-time je celkovy cas vsech hostu, stravenych obedem, pouzivame pro spocitani prumerne straveneho casu na obed
+globals [left-ok left-in-rush left-unsatisfied total-visit-time]
+
+
+;automaticke nastaveni pro lokalni restauraci, zmeni ovladaci prvky, aby vyhovovaly ucelu simulace
+to setup-auto
+  
+  ca ;clear all
+  reset-ticks
+  
+  set tables-count 15
+  set guest-every-nth-tick 60
+  set max-ticks-for-lunch 2700 ;na jidlo max 45 minut, 15 minut potrebuji na prichod/odchod z/do prace
+  set waiters-count 1
+  set max-ticks-needed-for-preparing-meal 60 ;1 jidlo se max.pripravuje 1 minutu
+  set entrances-count 1
+  set max-ticks-needed-for-eating 1800 ; na jidlo potrebuje max 30 minut
+  
+  ;rozmisteni stolu dle skutecnosti
+
+  ;ctverec s 15 stoly   
+    let x [-10 -7 -10 -7 -10 -7 -10 -7 -10 -7 10 7 10 7 10]
+    let y [6 6 3 3 0 0 -3 -3 -6 -6 6 6 3 3 0]  
+    
+    (foreach x y [
+      
+      create-tables 1 [
+        set color brown
+        set places table-seats
+        set size 2
+        set free-places 4 ;pri kroku se prepocitava
+        set shape "square"
+        setxy ?1 ?2
+        set orders []
+        set meals []
+        if show-labels? [
+          set label self
+        ]
+      ]
+    ])
+    
+    ;1 vchod/vychod
+    create-entrances 1 [
+      set color red;
       set shape "square"
-      setxy random-pxcor random-pycor ;nahodne umisteni stolu, jeste predelame, aby byly vic pohromade
-      set orders []
-      set meals []
+      set size 2
+      setxy 15 -15
       if show-labels? [
         set label self
       ]
     ]
+    
+    ;zbytek setupu v samostatne metode
+    setup-shared
+  
+end
+
+
+;manualni nastaveni, bere v uvahu slides, nemeni je
+to setup-manual
+  
+  ca ;clear all
+  reset-ticks
+  
+  ;stoly jsou umisteny nahodne
+  create-tables tables-count [
+    set color brown
+    set places table-seats
+    set size 2
+    set free-places 4 ;pri kroku se prepocitava
+    set shape "square"
+    setxy random-pxcor random-pycor ;nahodne umisteni stolu, jeste predelame, aby byly vic pohromade
+    set orders []
+    set meals []
+    if show-labels? [
+      set label self
+    ]
   ]
-  
-  ;ctverec s 20 stoly
-  if table-layout = "square 20" [
     
-    let x [-10 -7 -10 -7 -10 -7 -10 -7 -10 -7 10 7 10 7 10 7 10 7 10 7]
-    let y [6 6 3 3 0 0 -3 -3 -6 -6 6 6 3 3 0 0 -3 -3 -6 -6]  
     
-    ;20 stolu
-    (foreach x y [
-      
-      create-tables 1 [
-        set color brown
-        set places table-seats
-        set size 2
-        set free-places 4 ;pri kroku se prepocitava
-        set shape "square"
-        setxy ?1 ?2
-        set orders []
-        set meals []
-        if show-labels? [
-          set label self
-        ]
-      ]
-    ])
-    
-    ;2 vchody/vychody
-    (foreach [0 0] [15 -15] [
-      create-entrances 1 [
-        set color red;
-        set shape "square"
-        set size 2
-        setxy ?1 ?2 
-        if show-labels? [
-          set label self
-        ]
-      ]])
-    
+  ;vchody/vychody nahodne
+  create-entrances entrances-count [
+    set color red;
+    set shape "square"
+    set size 2
+    setxy random-pxcor random-pycor
+    if show-labels? [
+      set label self
+    ]
   ]
-  
-  ;hvezda s 20 stoly
-  if table-layout = "star 20" [
     
-    let x [0 0 12 -12 10 -10 -10 10 5 -5 -5 5 11 11 -11 -11 12]
-    let y [12 -12 0 0 10 -10 10 -10 11 -11 11 -11 7 -5 5 -5 4]  
     
-    ;20 stolu
-    (foreach x y [
-      
-      create-tables 1 [
-        set color brown
-        set places table-seats
-        set size 2
-        set free-places 4 ;pri kroku se prepocitava
-        set shape "square"
-        setxy ?1 ?2
-        set orders []
-        set meals []
-        if show-labels? [
-          set label self
-        ]
-      ]
-    ])
-    
-    ;2 vchody/vychody
-    (foreach [0 0] [15 -15] [
-      create-entrances 1 [
-        set color red;
-        set shape "square"
-        set size 2
-        setxy ?1 ?2 
-        if show-labels? [
-          set label self
-        ]
-      ]])
-    
-  ]
-  
-  
-  
-  
-  
+end
+
+
+;spolecny setup pro setup-auto a setup-manual, nevola se ovladacim prvkem
+to setup-shared
+   
   create-waiters waiters-count [
     set color blue;
     set size 1
@@ -144,6 +144,7 @@ to setup
   ]
   
   
+  ;kuchyne vzdy 1, uprostred
   create-kitchens 1 [
     set color white;
     set label-color grey;
@@ -156,8 +157,8 @@ to setup
       set label self
     ] 
   ]
-   
   
+    
   ask waiters[
     set served-tables [] ;zatim zadne stoly
     ]
@@ -177,11 +178,13 @@ to setup
   ;pridej na seznam mist, ktere prochazi taky kuchyn
   ask waiters[
     set served-tables lput one-of kitchens served-tables
-  ]  
+  ]
+  
   
 end
 
 
+;spusteni simulace
 to go
   
   if ticks >= max-ticks [stop]; stop, pokud jsme dosahli limitu behu simulace
@@ -434,8 +437,8 @@ to guest-update-time
   set time time + 1
   let ratio (time / max-ticks-for-lunch) * 100
   
-  if ratio < 50 [ set color green ] ;OK
-  if ratio >= 75 and ratio < 100 [ set color orange ] ;75 casu, zacinaji byt nervozni
+  if ratio < 75 [ set color green ] ;OK
+  if ratio >= 75 and ratio < 90 [ set color orange ] ;75 casu, zacinaji byt nervozni
   if ratio >= 90 [set color red] ;nastvani, nestihaji
   
 end
@@ -571,6 +574,7 @@ to guest-grab-meal
   
 end
 
+
 ;host
 ;jez jidlo
 to guest-eat
@@ -598,9 +602,12 @@ to guest-leave
 
   ifelse at-entrance? [
     
+    ;aktualizuj statistiky hostu
     if color = green [set left-ok left-ok + 1]
     if color = orange [set left-in-rush left-in-rush + 1]
     if color = red [set left-unsatisfied left-unsatisfied + 1]
+    
+    set total-visit-time total-visit-time + time
     
     die
 
@@ -623,7 +630,6 @@ to kitchen-cook
   ;pripravi jidlo k vydani
   ;TODO lze dat brzdu, treba poisson, apod.
   ;predpokladam, ze je to restaurace v dobe obeda, takze se nevari, ale jen vydavaji obedy (menu), ktere uz jsou uvarene
-  ;1 tick = 1 pripravene jidlo
   if ticks mod max-ticks-needed-for-preparing-meal = 0 [ ;pokud jsem dosahl limitu na vydej
     set orders-cooked lput first orders-to-cook orders-cooked ;vem prvni jidlo z fronty a dej ho na konec jidel k vydani
     set orders-to-cook but-first orders-to-cook ;z fronty jidel k priprave zrus prvni polozku, uz je pripraveno k vydani
@@ -774,34 +780,34 @@ tables-count
 tables-count
 1
 100
-20
+15
 1
 1
 NIL
 HORIZONTAL
 
 BUTTON
+186
+252
+304
+285
+NIL
+setup-manual
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+BUTTON
 73
-254
-139
-287
-NIL
-setup
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
-
-BUTTON
-280
-255
-343
-288
+298
+136
+331
 go
 go
 T
@@ -815,10 +821,10 @@ NIL
 1
 
 BUTTON
-170
-254
-251
-287
+147
+298
+228
+331
 go once
 go
 NIL
@@ -840,7 +846,7 @@ waiters-count
 waiters-count
 1
 100
-2
+1
 1
 1
 NIL
@@ -854,8 +860,8 @@ SLIDER
 max-ticks-for-lunch
 max-ticks-for-lunch
 1
-1000
-600
+3600
+2700
 1
 1
 NIL
@@ -882,8 +888,8 @@ PLOT
 520
 563
 guest's satisfaction when left
-NIL
-NIL
+time (ticks)
+%
 0.0
 10.0
 0.0
@@ -892,10 +898,9 @@ true
 true
 "" ""
 PENS
-"ok" 1.0 0 -10899396 true "" "plot left-ok"
-"in rush" 1.0 0 -955883 true "" "plot left-in-rush"
-"unsatisfied" 1.0 0 -2674135 true "" "plot left-unsatisfied"
-"guests-here" 1.0 0 -13345367 true "" "plot count guests"
+"% ok" 1.0 0 -10899396 true "" "if left-ok + left-in-rush + left-unsatisfied > 0 [\nplot left-ok / (left-ok + left-in-rush + left-unsatisfied)  * 100\n]"
+"% in rush" 1.0 0 -955883 true "" "if left-ok + left-in-rush + left-unsatisfied > 0 [\nplot left-in-rush / (left-ok + left-in-rush + left-unsatisfied)  * 100\n]"
+"% unsatisfied" 1.0 0 -2674135 true "" "if left-ok + left-in-rush + left-unsatisfied > 0 [\nplot left-unsatisfied / (left-ok + left-in-rush + left-unsatisfied)  * 100\n]"
 
 SLIDER
 72
@@ -905,8 +910,8 @@ SLIDER
 max-ticks-needed-for-preparing-meal
 max-ticks-needed-for-preparing-meal
 1
-100
-3
+900
+60
 1
 1
 NIL
@@ -927,8 +932,8 @@ SLIDER
 max-ticks-needed-for-eating
 max-ticks-needed-for-eating
 1
-300
-100
+3600
+1800
 1
 1
 NIL
@@ -1008,8 +1013,8 @@ SLIDER
 entrances-count
 entrances-count
 1
-10
-2
+5
+1
 1
 1
 NIL
@@ -1103,16 +1108,6 @@ show-labels?
 1
 -1000
 
-CHOOSER
-473
-31
-629
-76
-guest-every-nth-tick
-guest-every-nth-tick
-1 2 3 4 5 7 10 20 30 40 50 100 200 400 800 1600
-7
-
 MONITOR
 540
 346
@@ -1172,15 +1167,44 @@ max-ticks
 NIL
 HORIZONTAL
 
-CHOOSER
-255
-31
-464
-76
-table-layout
-table-layout
-"random with tables-count" "square 20" "star 20" "l 20"
-2
+BUTTON
+73
+252
+174
+285
+setup-auto
+setup-auto
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+INPUTBOX
+266
+25
+421
+85
+guest-every-nth-tick
+60
+1
+0
+Number
+
+MONITOR
+438
+603
+532
+648
+avg visit time
+total-visit-time / (left-ok + left-in-rush + left-unsatisfied)
+17
+1
+11
 
 @#$#@#$#@
 ## WHAT IS IT?
