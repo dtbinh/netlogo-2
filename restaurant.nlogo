@@ -49,7 +49,7 @@ to setup-auto
   set tables-count 15
   set guest-every-nth-tick 60
   set max-ticks-for-lunch 2700 ;na jidlo max 45 minut, 15 minut potrebuji na prichod/odchod z/do prace
-  set waiters-count 1
+  set waiters-count 2
   set max-ticks-needed-for-preparing-meal 60 ;1 jidlo se max.pripravuje 1 minutu
   set entrances-count 1
   set max-ticks-needed-for-eating 1800 ; na jidlo potrebuje max 30 minut
@@ -82,7 +82,7 @@ to setup-auto
       set color red;
       set shape "square"
       set size 2
-      setxy 15 -15
+      setxy 0 -15
       if show-labels? [
         set label self
       ]
@@ -126,7 +126,10 @@ to setup-manual
       set label self
     ]
   ]
-    
+  
+  
+  ;zbytek setupu v samostatne metode
+  setup-shared  
     
 end
 
@@ -846,7 +849,7 @@ waiters-count
 waiters-count
 1
 100
-1
+2
 1
 1
 NIL
