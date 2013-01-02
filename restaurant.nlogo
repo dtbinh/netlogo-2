@@ -455,8 +455,8 @@ to guest-update-time
   set time time + 1
   let ratio (time / max-ticks-for-lunch) * 100
   
-  if ratio < 75 [ set color green ] ;OK
-  if ratio >= 75 and ratio <= 90 [ set color orange ]
+  if ratio <= 75 [ set color green ] ;OK
+  if ratio > 75 and ratio <= 90 [ set color orange ]
   if ratio > 90 [set color red] ;nastvani, nestihaji
   
 end
@@ -847,7 +847,7 @@ waiters-count
 waiters-count
 1
 100
-1
+2
 1
 1
 NIL
@@ -912,7 +912,7 @@ max-ticks-needed-for-preparing-meal
 max-ticks-needed-for-preparing-meal
 1
 900
-30
+60
 1
 1
 NIL
