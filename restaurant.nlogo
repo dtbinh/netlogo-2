@@ -912,7 +912,7 @@ max-ticks-needed-for-preparing-meal
 max-ticks-needed-for-preparing-meal
 1
 900
-55
+40
 1
 1
 NIL
@@ -1184,7 +1184,7 @@ INPUTBOX
 228
 307
 guest-every-nth-tick
-50
+40
 1
 0
 Number
