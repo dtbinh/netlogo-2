@@ -912,7 +912,7 @@ max-ticks-needed-for-preparing-meal
 max-ticks-needed-for-preparing-meal
 1
 900
-60
+55
 1
 1
 NIL
@@ -1119,7 +1119,7 @@ MONITOR
 355
 644
 % unsatisfied
-left-unsatisfied / (left-ok + left-in-rush + left-unsatisfied) * 100
+precision (left-unsatisfied / (left-ok + left-in-rush + left-unsatisfied) * 100) 2
 17
 1
 11
@@ -1130,7 +1130,7 @@ MONITOR
 249
 644
 % left-in-rush
-left-in-rush / (left-ok + left-in-rush + left-unsatisfied) * 100
+precision (left-in-rush / (left-ok + left-in-rush + left-unsatisfied) * 100) 2
 17
 1
 11
@@ -1141,7 +1141,7 @@ MONITOR
 138
 643
 % left-ok
-left-ok / (left-ok + left-in-rush + left-unsatisfied) * 100
+precision (left-ok / (left-ok + left-in-rush + left-unsatisfied) * 100) 2
 17
 1
 11
@@ -1184,7 +1184,7 @@ INPUTBOX
 228
 307
 guest-every-nth-tick
-60
+50
 1
 0
 Number
@@ -1195,7 +1195,7 @@ MONITOR
 467
 645
 avg visit time
-total-visit-time / (left-ok + left-in-rush + left-unsatisfied)
+round (total-visit-time / (left-ok + left-in-rush + left-unsatisfied))
 17
 1
 11
