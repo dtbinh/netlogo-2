@@ -847,7 +847,7 @@ waiters-count
 waiters-count
 1
 100
-2
+1
 1
 1
 NIL
@@ -912,7 +912,7 @@ max-ticks-needed-for-preparing-meal
 max-ticks-needed-for-preparing-meal
 1
 900
-40
+35
 1
 1
 NIL
@@ -1184,7 +1184,7 @@ INPUTBOX
 228
 307
 guest-every-nth-tick
-40
+35
 1
 0
 Number
