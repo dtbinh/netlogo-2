@@ -1230,8 +1230,6 @@ NIL
 @#$#@#$#@
 ## WHAT IS IT?
 
-(a general understanding of what the model is trying to show or explain)
-
 This model simulates general traffic flow in a restaurant during lunch time. 
 
 During these hours, guests come, seat and wait for a waiter. When the waiter come they make an order from menu. Waiter goes to kitchen with the order and kitchen (cook) prepares ordered lunch. Then waiter pull-up the lunch (lunches) and bring it back to the guest's table.
@@ -1244,94 +1242,129 @@ Our task is to keep the rate of unsatisfied guests as low as possible. Also, we 
 
 ## HOW IT WORKS
 
-(what rules the agents use to create the overall behavior of the model)
-
 ### Static (non-moving) objects:
-
-#### Entrance / Exit
-
-* a red square
-* a place where guests enter and leave the restaurant, aka "door"
-* number of entrances is configurable by **entrances-count** slider
-
-#### Table
-
-* a brown square
-* number of tables is configurable through **tables-count** slider
-* it has just limited places (chairs) for sitting (adjustable by **table-seats** slider)
-* free capacity = table seats - occupied seats
-* when free capacity reaches 0, nobody else can sit at the table
 
 #### Kitchen
 
-* a white square
-* the model considers just one kitchen because it's common in reality
-* gets orders from waiters (amount is shown on **kitchen orders-to-cook** monitor)
-* "transforms" orders to lunches (amount is shown on **kitchen orders-cooked** monitor)
-* time for preparing lunch can be set using **max-ticks-needed-for-preparing-meal** slider, then **ticks mod max-ticks-needed-for-preparing-meal = 0** applies
+* white square shape
+* there is always one kitchen in the simulation and its position is always in the middle of the world.
+* kitchen receives orders from waiters and prepares meals. The „speed“ of the preparation can be set by _**max-ticks-needed-for-preparing-meal**_. Using this value, one meal is prepared every n-th tick.
+* kitchen has two queues: _**orders-to-cook**_ (queue to be done) and _**orders-cooked**_ (finished queue). _**Orders-to-cook**_ is filled by waiters (they empty their _**orders-to-kitchen**_ here) and _**orders-cooked**_ is filled by the kitchen itself.
+* If we want to scale up the kitchen to be as fast as possible we need to set up the _**max-ticks-needed-for-preparing-meal**_ slider to the smallest value (1). Then every tick one meal can be prepared.
 
+#### Tables
+
+* brown square shape
+* tables are served by waiters
+* number of tables can be set by _**tables-count**_ slider
+* tables are positioned randomly except the case when _**fixed with 20 tables and 1 entrance**_ layout is used. In this case, fixed layout and only 20 tables are set.
+
+
+#### Entrances / Exits
+
+* red square shape
+* number of entrances can be set through _**entrances-count**_ slider
+* guests come and leave througt entrances / exits
+* coming through particular entrance is random
+* when guests leave they're looking for the nearest entrance from the table which they just left.
+* entrances and exists are positioned randomly except the case when _**fixed with 20 tables and 1 entrance**_ layout is used. In this case, fixed layout and only 1 entrance is set.
+
+#### Layouts
+
+* a layout is a positioning of tables and entrances for simulation use-cases
+2 layouts (via chooser) can be set:
+    * fixed with 20 tables and 1 entrance – this layout is just for purposes of „Simulation of Systems, 4IT496“ Course at University of Economics, Prague.
+    * random using set tables and entrances – this layout puts the tables and entrance randomly in the world
 
 ### Dynamic (moving) objects:
 
-#### Guest
+#### Guests
 
-* arrow shape 
-* green / orange / red color depends on the feeling (ok / in rush / unsatisfied)
-* they come to the restaurant and they are hungry so they just want to grab a lunch, eat it and get out as fast as possible
-* new guest comes every n-th click (round) and it's adjustable through **guest-every-nth-tick** slider
-* has limited time for his lunch only, it's adjustable through **max-ticks-for-lunch** slider
-* when time spent in the restaurant reaches 75% of limited time they are "in-rush"
-* when time spent in the restaurant reaches 90% of limited time they are "unsatisfied"
-* they prefer to seat alone
-* they prefer to use the nearest exit when they are done
+* Green / orange / red arrow shape (set by time remaining, see bottom)
+* One guest comes every n-th tick set by _**guest-every-nth-tick**_ input
+* A maximum time for the lunch is 60 minutes.
+* When guests spend (0; 75> % of the maximum time in the restaurant they're OK and they're green
+* When they spend (75; 90> % they're in rush, orange.
+* When they spend (90; 100> % they are unsatisfied because they won't be back at their work on time, red.
+* A guest's flow is following: 
+    * coming – the very first state when guests come to the restaurant
+    * seating – they're looking for a free place at any table but they prefer to sit alone
+    * ordering – when they get a seat they're waiting for their waiter (every waiter has his table where he's serving to)
+    * waiting – whey they put an order to the waiter they're waiting for ordered meal
+    * eating – when the waiter brings the meal they're eating
+    * wanna pay – when they're finished with the meal they're waiting for the waiter again as they want to pay
+    * leaving – done with pay, they're looking for the nearest exit and leaving the restaurant
+    * left – the last and „fake“ state, just for statistical reasons. Guests in this state doesn't exist anymore but we need to know how many guests visited our restaurant since we opened.
 
-#### Guest's states
 
-In time, guests have these states:
+#### Waiters
 
-* coming - first state when they came to the restaurant
-* seating - they're looking for any free table. A guest prefers to sit as alone as possible so he's choosing a table with maximum free capacity. Distance doesn't matter in this case (this is how reality works)
-* ordering - when they sit they call for a waiter
-* waiting - after the order has been placed they wait for the lunch
-* eating - when the lunch has been brough, they're in eating state. Time for eating can be set using **max-ticks-needed-for-eating** slider and then they are done with the lunch when _ticks mod max-ticks-needed-for-eating = 0_ occurs
-* wanna-pay - when guests are done with the lunch they want to pay and so wait for their waiter
-* leaving - final state, they are looking for nearest exit (entrance)
-
-#### Waiter
-
-* blue arrow
-* has tables to serve
-* one waiter can have 0..N tables
-* one table has 1 waiter only
-* waiters don't help each other so every waiter is responsible for his tables only
-* the simulation tries to assign waiters to tables fairly. For example if the number of tables is 4 and we have 2 waiters each of them will have 2 tables.
-* waiter tries to move just in case it makes it sense. If he doesn't have any work (no guests, no orders for kitchen, no orders to pull) he stops.
-* waiter circles between tables and kitchen
-* if waiter's table is empty or nobody at the table wants to order/pay, the table is skipped
-* if waiter doesn't have anything to push (order) or pull (take) from kitchen, the kitchen is skipped
-* the order is placed for particular table, not for guest. This is how the reality works. For example "I have two orders for table 2 and three for table 3".
-
+* blue arrow shape
+* waiters serve to guests through tables
+* at the setup phase, every waiter will draw the tables where they're serving at. The drawing process is random and „fair“ as every waiter has almost same number of tables. For example if we have 4 tables and 2 waiters, each of them has 2 tables. If we have 5 tables and 2 waiters, first waiter will have 2 tables and the second one has 3 tables because 1 table can be served just by 1 waiter, not more.
+* If the number of waiters is greater than number of tables, the remaining waiters don't serve and they're stucked and useless.
+* Waiters circulate between tables and kitchen.
+* They skip empty tables.
+* They skip kitchen if there is nothing to put or pick up from it.
+* When they receive an order from a customer they put it to the _**orders-to-kitchen**_ queue and this queue is passed to the kitchen on the next visit.
+* Whey they pick up finished meal from the kitchen they put the meal to the _**orders-to-table**_ queue and the meal (order) is served to the table where it belongs to.
+* The number of waiters can be set via _**waiters-count**_ slider.
+* The optimum is to have as many waiters as tables but in reality it's not possible.
 
 ## HOW TO USE IT
 
-Default values are OK to run. So just press Setup button and then Go. Then watch amazing simulation.
+### Quick Start
 
-#### Sliders
+Default values are OK to run. So just press _**reset to default values**_ button and then "go". Then watch the amazing simulation.
 
-* waiters-count - number of waiters work at restaurant. Default is 2.
-* tables-count - number of tables at restaurant. Default is 10. Typical value is between 8-20.
-* max-ticks-for-lunch - guest's time for lunch. Default is 600. Recommended value is between 300-600.
-* table-seats - number of seats at each tables. Default is 4. Typical is 2-6.
-* entrances-count - number of entrances (exits). Default is 2. Typical is 1-2.
-* max-ticks-needed-for-preparing-meal - time for preparing one meal in the kitchen. Default 10. It uses modulo: When _ticks mod max-ticks-needed-for-preparing-meal = 0_, one meal (lunch) is prepared for pull out by waiter.
-* max-ticks-needed-for-eating - time for eating lunch. Default is 100. It uses modulo: When _ticks mod max-ticks-needed-for-eating = 0_, a guest is done with his lunch.
-* max-ticks - maximum ticks when the simulation will stop. Just for convenience, doesn't have any impact to the model.
+### Interface description
 
+#### Choosers
+
+* layout – table and entrance positioning, see above „layout“
+
+#### Sliders and Choosers
+
+* tables-count – number of tables used in the simulation. This variable will take into account only if we use „random using set tables and entrances“ layout. Default is 20.
+* entrances-count – number of entrances/exits. This variable will take into account only if we use „random using set tables and entrances“ layout. Default is 1.
+* waiters-count – number of waiters. Typical value is 2-5 waiters for one restaurant. Default is 2.
+* table-seats – number of seats at one table. More seats we have, more guest we can serve. Default is 4 so 1 table can hosts 4 guests.
+* max-ticks-needed-for-preparing-meal - time for preparing one meal in the kitchen. Default is 60 (60 ticks=60 seconds). It uses modulo: When _**ticks mod max-ticks-needed-for-preparing-meal = 0**_, one meal (lunch) is prepared for pull out by a waiter for particular table.
+* max-ticks-for-lunch - guest's time for lunch. Default is 2700 ticks which stands for 2700 seconds (45 minutes).
+* max-ticks-needed-for-eating - time for eating lunch. Default is 1800 which stands for 1800 seconds (30 minutes). It uses modulo: When ticks mod _**max-ticks-needed-for-eating = 0**_, a guest is done with his lunch. 
+* max-ticks - maximum ticks when the simulation will stop. Just for convenience, doesn’t have any impact to the model but we need to stop running simulation at the same time for make an analysis.
+
+#### Inputs 
+* guest-every-nth-tick - every n-th tick a new guest will come. Default is 60 so 1 guest will come each minute. Recommended value is between 20-100. 
 
 #### Switches
 
-* show-labels? - do we need to show labels of the objects? Default yes.
+* show-labels? - would we like to see guests states and orders on the fly? Default on.
 
+
+#### Buttons
+
+* setup – this button set up the simulation, place objects and make drawing of waiters for their tables.
+* go – run the simulation up to „max-ticks“ variable, then stops.
+* go once – run one step of simulation.
+* reset to default values – set up the simulation for 4IT496 purposes (a local restaurant problem). Simulation conclusion will follow values set up by this button.
+
+#### Plots
+* guest's satisfaction when left – this plot will show % graph of guests mood. Green – they left restaurant on time, Orange – they're in rush (time is almost gone) and Red – they exceeded the time dedicated to their lunch.
+
+
+#### Monitors
+* guests-here - number of guests in restaurant now 
+* left-ok - number of guests who left the restaurant with good feeling (time for lunch hasn’t been exceeded) 
+* left-in-rush - number of guests who left the restaurant in rush (time for lunch has been almost exceeded) 
+* left-unsatisfied - number of guests who left the restaurant unsatisfied (time for lunch has been exceeded) 
+* % left-ok - rate of guests who left the restaurant with good mood (time for lunch hasn’t been exceeded) related to total guests 
+* % left-in-rush - rate of guests who left the restaurant in rush (time for lunch has been almost exceeded) related to total guests 
+* % left-unsatisfied - rate of guests who left the restaurant unsatisfied (time for lunch has been exceeded) related to total guests 
+* avg visit time – how many secods (ticks) guests spent in restaurant in average. The lower is the better.
+* coming, seating, ordering, waiting, eating, wanna-pay, leaving, left - number of guests with these states 
+* kitchen orders-to-cook - number of orders in kitchen waiting to be cooked 
+* kitchen orders-cooked - number of orders in kitchen waiting to be pull-out by its waiter 
 
 #### Choosers
 
@@ -1359,8 +1392,6 @@ Default values are OK to run. So just press Setup button and then Go. Then watch
 * go once - one step in the simulation
 * go - run the simulation
 
-(how to use the model, including a description of each of the items in the Interface tab)
-
 ## THINGS TO NOTICE
 
 * due to random placing of the tables, the best thing is to have kitchen in the middle of the space
@@ -1370,13 +1401,9 @@ Default values are OK to run. So just press Setup button and then Go. Then watch
 * small space = better efficiency
 * number of seats at a table is not as important because waiter has to come regardless of 1 or 10 guests
 
-(suggested things for the user to notice while running the model)
-
 ## THINGS TO TRY
 
 * set guest-every-nth-tick to 1, tables-count to 20, waiters-count to 5 and speed-up the simulation. A flock will arise :).
-
-(suggested things for the user to try to do (move sliders, switches, etc.) with the model)
 
 ## EXTENDING THE MODEL
 
@@ -1387,22 +1414,21 @@ Default values are OK to run. So just press Setup button and then Go. Then watch
 * guests and waiters avoiding
 * guest will come on the basis of a statistical function (poisson distribution, for example)
 
-(suggested things to add or change in the Code tab to make the model more complicated, detailed, accurate, etc.)
-
 ## NETLOGO FEATURES
 
-(interesting or unusual features of NetLogo that the model uses, particularly in the Code tab; or where workarounds were needed for missing features)
+-
 
 ## RELATED MODELS
 
-(models in the NetLogo Models Library and elsewhere which are of related interest)
+-
 
 ## CREDITS AND REFERENCES
 
-Author: Bc. Jiri Hradil (jiri@hradil.cz)
+Author: Bc. Jiří Hradil (jiri@hradil.cz)
+Created for: The University of Economics, Prague
 First release: 18.12.2012
 
-(a reference to the model's URL on the web if it has one, as well as any other necessary credits, citations, and links)
+<a rel="license" href="http://creativecommons.org/licenses/by-nc/3.0/cz/deed.en_US"><img alt="Creative Commons License" style="border-width:0" src="http://i.creativecommons.org/l/by-nc/3.0/cz/88x31.png" /></a><br />This work is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-nc/3.0/cz/deed.en_US">Creative Commons Attribution-NonCommercial 3.0 Czech Republic License</a>.
 @#$#@#$#@
 default
 true
